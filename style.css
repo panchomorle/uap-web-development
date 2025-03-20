@@ -1,0 +1,208 @@
+/* CSS Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background-color: #ffffff;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.container {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+
+/* Header */
+header {
+    text-align: center;
+    background-color: #f2efe8;
+}
+
+h1 {
+    font-size: 42px;
+    font-weight: bold;
+}
+
+.header-title {
+    padding: 20px 0;
+}
+
+.title-gray {
+    color: #6b6b6b;
+}
+
+.title-orange {
+    color: #e8994a;
+}
+
+/* Tab */
+.tabs {
+    display: flex;
+    position: relative;
+    border-bottom: 2px solid #e8994a;
+}
+
+.tab {
+    flex: 1;
+    padding: 15px;
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    color: #999;
+    cursor: pointer;
+    position: relative;
+    text-align: center;
+}
+
+.tab.active {
+    color: #333;
+    font-weight: bold;
+}
+
+.tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #e8994a;
+}
+
+.add-button {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 50px;
+    height: 50px;
+    background-color: #a87979;
+    color: white;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Input area styles */
+.todo-input {
+    display: flex;
+    margin: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+#todo-input {
+    flex: 1;
+    padding: 15px 20px;
+    border: none;
+    background-color: #f1ece6;
+    font-size: 16px;
+    border-radius: 0;
+}
+
+#todo-input::placeholder {
+    color: #aaa;
+}
+
+.add-todo-button {
+    padding: 15px 30px;
+    background-color: #7ab4c6;
+    color: white;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Todo list styles */
+.todo-list {
+    background-color: #f1ece6;
+    border-radius: 20px;
+    margin: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.todo-item {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #e0dcd6;
+}
+
+.todo-item:last-child {
+    border-bottom: none;
+}
+
+.todo-check {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #888;
+    border-radius: 50%;
+    margin-right: 15px;
+    cursor: pointer;
+    position: relative;
+}
+
+.todo-check.checked {
+    border-color: #e8994a;
+    background-color: #e8994a;
+}
+
+.todo-check.checked::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 7px;
+    width: 6px;
+    height: 12px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.todo-text {
+    flex: 1;
+    font-size: 16px;
+    color: #333;
+}
+
+.completed-text {
+    color: #aaa;
+    text-decoration: line-through;
+}
+
+.delete-button {
+    width: 20px;
+    height: 20px;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    opacity: 0.5;
+}
+
+.clear-section {
+    display: flex;
+    justify-content: flex-end;
+    padding: 10px 0;
+}
+
+.clear-completed-button {
+    background: transparent;
+    margin: 20px;
+    border: none;
+    color: #e8994a;
+    cursor: pointer;
+    font-size: 16px;
+}
