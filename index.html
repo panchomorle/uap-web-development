@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TODO List</title>
     <link rel="stylesheet" href="style.css">
+    <script src="script.js"></script>
 </head>
 <body>
     <main class="container">
@@ -12,51 +13,24 @@
             <h1 class="header-title"><span class="title-gray">ToDo</span><span class="title-orange">List</span></h1>
 
             <div class="tabs">
-                <button class="tab active" id="personal-tab">Personal</button>
-                <button class="tab" id="professional-tab">Professional</button>
+                <button class="tab active" id="personal-tab" onclick="setFilter('done')">Done</button>
+                <button class="tab" id="professional-tab" onclick="setFilter('undone')">Undone</button>
+                <button class="tab" id="professional-tab" onclick="setFilter('all')">All</button>
                 <button class="add-button">+</button>
             </div>
         </header>
         
-        <div class="todo-input">
+        <form class="todo-input" onsubmit="submitForm(event)">
             <input type="text" id="todo-input" placeholder="What do you want to do?">
-            <button class="add-todo-button">ADD</button>
-        </div>
+            <button type="submit" class="add-todo-button">ADD</button>
+        </form>
         
-        <div class="todo-list">
-            <div class="todo-item completed">
-                <div class="todo-check checked"></div>
-                <p class="todo-text completed-text">Personal Work No. 1</p>
-                <button class="delete-button">X</button>
-            </div>
+        <div class="todo-list" id="todo-list">
             
-            <div class="todo-item">
-                <div class="todo-check"></div>
-                <p class="todo-text">Personal Work No. 2</p>
-                <button class="delete-button">X</button>
-            </div>
             
-            <div class="todo-item">
-                <div class="todo-check"></div>
-                <p class="todo-text">Personal Work No. 3</p>
-                <button class="delete-button">X</button>
-            </div>
-            
-            <div class="todo-item completed">
-                <div class="todo-check checked"></div>
-                <p class="todo-text completed-text">Personal Work No. 4</p>
-                <button class="delete-button">X</button>
-            </div>
-            
-            <div class="todo-item">
-                <div class="todo-check"></div>
-                <p class="todo-text">Personal Work No. 5</p>
-                <button class="delete-button">X</button>
-            </div>
-
-            <div class="clear-section">
-                <button class="clear-completed-button">Clear Completed</button>
-            </div>
+        </div>
+        <div class="clear-section">
+            <button class="clear-completed-button" onclick="clearCompleted()">Clear Completed</button>
         </div>
     </main>
 </body>
