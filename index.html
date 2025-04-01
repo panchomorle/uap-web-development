@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Tareas</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="scripts.js"></script>
+</head>
+<body>
+    <div class="container">
+
+        <h1 class="title">GESTOR DE<span class="highlighted"> TAREAS</span></h1>
+
+
+        <div class="pages">
+            <button class="page active">Rutinarias</button>
+            <button class="page">Trabajo</button>
+            <button class="add_page_button">+</button>
+        </div>
+
+        <div class="filter-buttons">
+            <button id="allButton">Todas</button>
+            <button id="activeButton">Incompletas</button>
+            <button id="completedButton">Completadas</button>
+          </div>
+          
+        <div class="tasks_input">
+            <input type="text" placeholder="Introduce una Nueva Tarea" id="new_task">
+            <button class="add_task_button">AGREGAR</button>
+        </div>
+            
+        <div class="task_list">
+            <ul>
+                <li class="task completed">
+                    <span class="checkmark">✔</span> <span class="task_text"></span>
+                    <span class="delete">X</span>
+                </li>
+                <li class="task">
+                    <span class="checkmark">o</span> <span class="task_text"></span>
+                    <span class="delete">X</span>
+                </li>
+            </ul>
+
+        </div>
+        <button class="clear_button">Borrar los terminados</button>
+    </div>
+    
+    
+</body>
+</html>
