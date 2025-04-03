@@ -1,0 +1,297 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { state } from '../state';
+// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
+// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+
+if (Astro.request.method === "POST"){
+	const formData = await Astro.request.formData();
+
+	// manejo de filtros
+	const done = formData.get("done");
+	const undone = formData.get("undone");
+	const all = formData.get("all");
+
+	if (done) {
+		state.filter = "done";
+	} else if (undone) {
+		state.filter = "undone";
+	} else if (all) {
+		state.filter = "all";
+	}
+	//--------------------
+	// manejo de acciones
+	const addTask = formData.get("addTask");
+	const completeTask = formData.get("completeTask");
+	const deleteTask = formData.get("deleteTask");
+	const clearCompleted = formData.get("clearCompleted");
+	if (addTask) {
+		const taskText = formData.get("taskInput");
+		console.log("texto de la tarea", taskText);
+		if (taskText) {
+			if (typeof taskText === 'string') {
+				state.tasks.push({ id: Date.now(), text: taskText, completed: false });
+			}
+		}
+	} else if (completeTask) {
+		const taskId = Number(completeTask);
+		const task = state.tasks.find(task => task.id === taskId);
+		if (task) {
+			task.completed = !task.completed;
+		}
+	} else if (deleteTask) {
+		const taskId = Number(deleteTask);
+		state.tasks = state.tasks.filter(task => task.id !== taskId);
+	} else if (clearCompleted) {
+		state.tasks = state.tasks.filter(task => !task.completed);
+	}
+	return Astro.redirect("/");
+}
+---
+
+<Layout>
+	<main class="container">
+        <header>
+            <h1 class="header-title"><span class="title-gray">ToDo</span><span class="title-orange">List</span></h1>
+
+			<form method="POST" class="tabs">
+                <button class="tab active" id="personal-tab" name="done" value="done">Done</button>
+                <button class="tab" id="professional-tab" name="undone" value="undone">Undone</button>
+                <button class="tab" id="professional-tab" name="all" value="all">All</button>
+                <button class="add-button">+</button>
+			</form>
+
+        </header>
+        
+        <form method="POST" class="todo-input">
+            <input type="text" id="todo-input" name="taskInput" placeholder="What do you want to do?">
+            <button type="submit" class="add-todo-button" name="addTask" value="true">ADD</button>
+        </form>
+        
+        <form method="POST" class="todo-list" id="todo-list">
+            {
+				state.tasks.map((task)=>{
+					if (state.filter === "done" && !task.completed) return null;
+					if (state.filter === "undone" && task.completed) return null;
+					return (
+						<div class="todo-item" id={String(task.id)}>
+							<button type="submit" name="completeTask" value={task.id}
+							class={`todo-check ${task.completed ? 'checked' : ''}`}></button>
+							<p class={`todo-text ${task.completed ? 'completed-text' : ''}`}>{task.text}</p>
+							<button type="submit" name="deleteTask" value={task.id}
+							class="delete-button">X</button>
+						</div>
+					)
+				})
+			}
+            
+        </form>
+        <form class="clear-section" method="POST">
+            <button class="clear-completed-button" name="clearCompleted" value="true">Clear Completed</button>
+		</form>
+    </main>
+</Layout>
+
+<style>
+	* {
+		margin: 0;
+		padding: 0;
+		box-sizing: border-box;
+		font-family: Arial, sans-serif;
+	}
+
+
+	.container {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+	}
+
+
+	/* Header */
+	header {
+		text-align: center;
+		background-color: #f2efe8;
+	}
+
+	h1 {
+		font-size: 42px;
+		font-weight: bold;
+	}
+
+	.header-title {
+		padding: 20px 0;
+	}
+
+	.title-gray {
+		color: #6b6b6b;
+	}
+
+	.title-orange {
+		color: #e8994a;
+	}
+
+	/* Tab */
+	.tabs {
+		display: flex;
+		position: relative;
+		border-bottom: 2px solid #e8994a;
+	}
+
+	.tab {
+		flex: 1;
+		padding: 15px;
+		background: transparent;
+		border: none;
+		font-size: 18px;
+		color: #999;
+		cursor: pointer;
+		position: relative;
+		text-align: center;
+	}
+
+	.tab.active {
+		color: #333;
+		font-weight: bold;
+	}
+
+	.tab.active::after {
+		content: '';
+		position: absolute;
+		bottom: -2px;
+		left: 0;
+		width: 100%;
+		height: 2px;
+		background-color: #e8994a;
+	}
+
+	.add-button {
+		position: absolute;
+		right: 0;
+		top: 0;
+		width: 50px;
+		height: 50px;
+		background-color: #a87979;
+		color: white;
+		border: none;
+		font-size: 24px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	/* Input area styles */
+	.todo-input {
+		display: flex;
+		margin: 20px;
+		box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+		border-radius: 20px;
+		overflow: hidden;
+	}
+
+	#todo-input {
+		flex: 1;
+		padding: 15px 20px;
+		border: none;
+		background-color: #f1ece6;
+		font-size: 16px;
+		border-radius: 0;
+	}
+
+	#todo-input::placeholder {
+		color: #aaa;
+	}
+
+	.add-todo-button {
+		padding: 15px 30px;
+		background-color: #7ab4c6;
+		color: white;
+		border: none;
+		font-weight: bold;
+		cursor: pointer;
+	}
+
+	/* Todo list styles */
+	.todo-list {
+		background-color: #f1ece6;
+		border-radius: 20px;
+		margin: 20px;
+		box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+		overflow: hidden;
+	}
+
+	.todo-item {
+		display: flex;
+		align-items: center;
+		padding: 15px 20px;
+		border-bottom: 1px solid #e0dcd6;
+	}
+
+	.todo-item:last-child {
+		border-bottom: none;
+	}
+
+	.todo-check {
+		width: 24px;
+		height: 24px;
+		border: 2px solid #888;
+		border-radius: 50%;
+		margin-right: 15px;
+		cursor: pointer;
+		position: relative;
+	}
+
+	.todo-check.checked {
+		border-color: #e8994a;
+		background-color: #e8994a;
+	}
+
+	.todo-check.checked::after {
+		content: '';
+		position: absolute;
+		top: 3px;
+		left: 7px;
+		width: 6px;
+		height: 12px;
+		border: solid white;
+		border-width: 0 2px 2px 0;
+		transform: rotate(45deg);
+	}
+
+	.todo-text {
+		flex: 1;
+		font-size: 16px;
+		color: #333;
+	}
+
+	.completed-text {
+		color: #aaa;
+		text-decoration: line-through;
+	}
+
+	.delete-button {
+		width: 20px;
+		height: 20px;
+		background-color: transparent;
+		border: none;
+		cursor: pointer;
+		position: relative;
+		opacity: 0.5;
+	}
+
+	.clear-section {
+		display: flex;
+		justify-content: flex-end;
+		padding: 10px 0;
+	}
+
+	.clear-completed-button {
+		background: transparent;
+		margin: 20px;
+		border: none;
+		color: #e8994a;
+		cursor: pointer;
+		font-size: 16px;
+	}
+</style>
