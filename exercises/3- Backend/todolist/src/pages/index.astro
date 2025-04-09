@@ -1,52 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { state } from '../state';
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
-
-if (Astro.request.method === "POST"){
-	const formData = await Astro.request.formData();
-
-	// manejo de filtros
-	const done = formData.get("done");
-	const undone = formData.get("undone");
-	const all = formData.get("all");
-
-	if (done) {
-		state.filter = "done";
-	} else if (undone) {
-		state.filter = "undone";
-	} else if (all) {
-		state.filter = "all";
-	}
-	//--------------------
-	// manejo de acciones
-	const addTask = formData.get("addTask");
-	const completeTask = formData.get("completeTask");
-	const deleteTask = formData.get("deleteTask");
-	const clearCompleted = formData.get("clearCompleted");
-	if (addTask) {
-		const taskText = formData.get("taskInput");
-		console.log("texto de la tarea", taskText);
-		if (taskText) {
-			if (typeof taskText === 'string') {
-				state.tasks.push({ id: Date.now(), text: taskText, completed: false });
-			}
-		}
-	} else if (completeTask) {
-		const taskId = Number(completeTask);
-		const task = state.tasks.find(task => task.id === taskId);
-		if (task) {
-			task.completed = !task.completed;
-		}
-	} else if (deleteTask) {
-		const taskId = Number(deleteTask);
-		state.tasks = state.tasks.filter(task => task.id !== taskId);
-	} else if (clearCompleted) {
-		state.tasks = state.tasks.filter(task => !task.completed);
-	}
-	return Astro.redirect("/");
-}
 ---
 
 <Layout>
@@ -54,7 +8,7 @@ if (Astro.request.method === "POST"){
         <header>
             <h1 class="header-title"><span class="title-gray">ToDo</span><span class="title-orange">List</span></h1>
 
-			<form method="POST" class="tabs">
+			<form action="/api/play" method="POST" class="tabs">
                 <button class="tab active" id="personal-tab" name="done" value="done">Done</button>
                 <button class="tab" id="professional-tab" name="undone" value="undone">Undone</button>
                 <button class="tab" id="professional-tab" name="all" value="all">All</button>
@@ -63,12 +17,12 @@ if (Astro.request.method === "POST"){
 
         </header>
         
-        <form method="POST" class="todo-input">
+        <form action="/api/play" method="POST" class="todo-input">
             <input type="text" id="todo-input" name="taskInput" placeholder="What do you want to do?">
             <button type="submit" class="add-todo-button" name="addTask" value="true">ADD</button>
         </form>
         
-        <form method="POST" class="todo-list" id="todo-list">
+        <form action="/api/play" method="POST" class="todo-list" id="todo-list">
             {
 				state.tasks.map((task)=>{
 					if (state.filter === "done" && !task.completed) return null;
@@ -86,7 +40,7 @@ if (Astro.request.method === "POST"){
 			}
             
         </form>
-        <form class="clear-section" method="POST">
+        <form action="/api/play" class="clear-section" method="POST">
             <button class="clear-completed-button" name="clearCompleted" value="true">Clear Completed</button>
 		</form>
     </main>
