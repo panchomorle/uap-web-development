@@ -1,0 +1,316 @@
+---
+import { number } from "astro:schema";
+import Layout from "../layouts/Layout.astro";
+import { state } from "./state";//importo el state.ts
+
+
+ //ACLARO ANTES DE QUE REVISEN EL CODIGO, EL CSS ES PURO PROMPT DEL CHAT, FUE FULL COPY PASTE, POR LO QUE SI ME PREGUNTAN, MUCHO NO VOY A SABER.
+ //EL CHAT Y YO HICIMOS ALGUNOS CAMBIOS EN EL HTML PARA QUE SE PAREZCA LO MÁXIMO POSIBLE AL ToDo DE LA FOTO QUE ESTÁ EN UNA DE LAS TAREAS
+//AHORA SI, EL CÓDIGO, QUE AUNQUE NO CREAN NO FUE COPY PASTE
+
+
+//Creo el procesamiento del form como en el ejemplo del tateti
+
+if(Astro.request.method === "POST"){//¿este pedido HTTP fue un form con metodo POST?
+    console.log("POST recibido");
+    try{
+        const formData = await Astro.request.formData();//recupero los datos del formulario
+        const action = formData.get("action")?.toString();//tipos de acciones que pueden ocurrir en el form, por ejemplo: <... name= "action" value= "add">AGREGAR<...>
+
+        //ahora defino que pasa en cada action 
+        if(action === "add"){
+            const taskText = formData.get("task")?.toString().trim();//busca en los datos enviados un campo llamado "task", se pasa a texto y con .trim() se eliminan los espacios en blanco al principio y al final para evitar tareas vacías por accidente y para que se guarde bien por si pones espacios como loco pq sos gil
+            if(taskText){//uno diría bueno, ya con la declaración de arriba basta para saber que la tarea no está vacía, no, aún hay que verificar si después del .trim() el texto sigue teniendo contenido
+                state.tasks.push({//en este caso,si sigue el flujo, se agrega una nueva tarea al array que declaré en state.ts
+                    id: state.nextId++,//asigna id, luego incrementa
+                    task_content: taskText,
+                    completed: false
+                });
+                console.log(state.tasks); // para ver si se guardan en el array
+            }
+        }
+
+        if(action === "toggle"){//verifico si se aprieta el botón para cambiar el estado
+            const id = Number(formData.get("id"));//recupero el id de la tarea y lo paso al tipo Number
+            const task = state.tasks.find(t => t.id === id);//creo una variable tarea y busco la tarea por su id
+            if(task){//si existe, la cambio de estado, simple
+                task.completed = !task.completed;
+            }
+        }
+
+        if (action === "delete"){//verifico si se aprieta el boton de la basura bien fachero
+            const id = Number(formData.get("id"));//lo mismo, tengo que recuperar el id de la tarea y pasarlo al tipo Number
+            state.tasks = state.tasks.filter(t => t.id !== id);//acá cambia la lógica, cambio el array original, por uno donde NO tenga ese id recuperado, es decir la tarea que se quiere borrar .filter(t => t.id !== id);
+
+            //estos console son pq antes hice un mamarracho y no me andaba
+            console.log("tarea borrada")
+            console.log(state.tasks)
+        }
+
+        if(action === "filter"){
+            const newFilter = formData.get("filter")?.toString();// tenemos que extraer del form el filtro que se selecciona y lo convertimos a string
+            if(["all","active","completed"].includes(newFilter!)){//tiene que pasar este filtro, el cual verifica q el valor extraido sea válido, es decir, que sea o all, o active, o completed.
+                state.filter = newFilter!;//cambiamos el filtro en el state global, esto nos va a permitir que cuando se rendericen las tareas, se muestren solo las que correspondan al filtro seleccionado, re copado
+            }
+        }
+        if(action === "deleteCompleted"){
+            state.tasks = state.tasks.filter(task =>!task.completed);//almacena en el array aquellas tareas que NO esten completadas, asi borro las completadas
+            console.log("tareas completadas fueron borradas")
+        }
+    }
+    catch(error){
+        console.error("error processing for data: ",error);
+    }
+}
+//desarrollo del filtrado de las tareas
+let filteredTasks = state.tasks; //este va a ser el array que va a mostrar todas las tareas
+if(state.filter === "active"){ // si el filtro actual es active
+    filteredTasks = state.tasks.filter(task => !task.completed);// con el método filter filtro las tareas.
+    //state.tasks.filter(...) va a recorrer cada tarea del array y va a devolver un nuevo array con las que cumplan una condición, que en este caso, deben cumplir la condición de una arrow function
+    //la arrow function dice task => !task.completed. esto dice que para cada task, se la incluya si NO está completada
+    //en conclusión, el array filtered tasks va a contener las tareas no terminadas
+    console.log("está en active, quiere decir que debe mostrar las NO completadas")
+} else if (state.filter === "completed"){// la misma lógica la plasmo en un else if pero esta vez para las completadas
+    filteredTasks = state.tasks.filter(task => task.completed);
+}
+---
+
+
+<Layout>
+    <div class="container">
+        <h1>ToDO <span class="highlighted">SSR</span></h1>
+
+        <div class="pages">
+            <button class="page active">Rutinarias</button>
+            <button class="page">Trabajo</button>
+            <button class="add_page_button">+</button>
+        </div>
+
+        <div class="filter-buttons">
+            <form method="POST">
+                <input type="hidden" name="action" value="filter" />
+                <input type="hidden" name="filter" value="all" />
+                <button type="submit" class={state.filter === "all" ? "active-filter" : ""}>Todas</button>
+            </form>
+        
+            <form method="POST">
+                <input type="hidden" name="action" value="filter" />
+                <input type="hidden" name="filter" value="active" />
+                <button type="submit" class={state.filter === "active" ? "active-filter" : ""}>No Completadas</button>
+            </form>
+        
+            <form method="POST">
+                <input type="hidden" name="action" value="filter" />
+                <input type="hidden" name="filter" value="completed" />
+                <button type="submit" class={state.filter === "completed" ? "active-filter" : ""}>Completadas</button>
+            </form>
+        </div>
+        
+        
+        <div class="tasks_input">
+            <form method="POST">
+                <input type="text" name="task" placeholder="Introduce una nueva tarea" required />
+                <button type="submit" name="action" value="add" class="add_task_button">Agregar a la Lista</button>
+            </form>
+        </div>
+        <ul>
+            {filteredTasks.map(task =>(
+                <li>
+                    <form method="POST" style="display: inline;">
+                        <input type="hidden" name="id" value= {task.id}/>
+                        <button type="submit" name="action" value="toggle">{task.completed ? "✅" : "⬜"}</button>
+                    </form>
+
+                    <span class={task.completed ? "completed" : ""}>{task.task_content}</span>
+
+
+                    <form method="POST" style="display: inline;">
+                        <input type="hidden" name="id" value={task.id} />
+                        <button type="submit" name="action" value="delete">🗑️</button>
+                    </form>
+                </li>
+            ))}
+        </ul>
+        <div class="containerDeleteAllCompleted">
+            <form method="POST">
+                <button type="submit" name="action" value="deleteCompleted">Borrar las completadas</button>
+            </form>
+        </div>
+    </div>
+    
+</Layout>
+
+<style>
+   body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f0ec;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 600px;
+    margin: 50px auto;
+    background: #f4f0ec;
+    border-radius: 30px;
+    padding: 40px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #555;
+    font-weight: 300;
+    font-size: 3em;
+    margin-bottom: 10px;
+}
+
+.highlighted {
+    color: #dc8a33;
+    font-weight: bold;
+}
+
+.pages {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    border-bottom: 2px solid #dc8a33;
+    padding-bottom: 10px;
+    margin-bottom: 30px;
+}
+
+.page {
+    background: none;
+    border: none;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #444;
+    cursor: pointer;
+}
+
+.page.active {
+    border-bottom: 2px solid #dc8a33;
+    color: #000;
+}
+
+.add_page_button {
+    background-color: #a67777;
+    color: white;
+    font-size: 1.5em;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 10px;
+    cursor: pointer;
+}
+
+.tasks_input{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background:#e9e4da ;
+    border-radius: 25px;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+
+.tasks_input input{
+    border: none;
+    background: none;
+    font-size: 16px;
+    flex: 1;
+    padding: 10px;
+    outline: none;
+
+}
+
+.add_task_button {
+    margin-left: 170px;
+    padding: 12px 25px;
+    background-color: #62bcd4;
+    border: none;
+    color: white;
+    font-weight: bold;
+    border-radius: 10px 10px 10px 10px;
+    font-size: 1em;
+    cursor: pointer;
+}
+
+.filter-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.filter-buttons form {
+    display: inline;
+}
+
+
+.filter-buttons button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border: none;
+    background-color: #f7f2eb;
+    color: #333;
+    border-radius: 10px;
+    transition: background-color 0.3s;
+}
+.filter-buttons button:hover {
+    background-color: #d8822f;
+    color: white;
+}
+
+
+
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: #f4f0ec;
+    border-bottom: 1px solid #b8d8df;
+    color: #333;
+    font-size: 1.1em;
+}
+
+li span {
+    flex-grow: 1;
+    margin: 0 10px;
+}
+
+li span.completed {
+    text-decoration: line-through;
+    color: #aaa;
+}
+
+button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1em;
+}
+
+.containerDeleteAllCompleted {
+    text-align: right;
+    margin-top: 20px;
+}
+
+.containerDeleteAllCompleted button {
+    color: #dc8a33;
+    font-weight: bold;
+    background: none;
+    border: none;
+    font-size: 1em;
+    cursor: pointer;
+}
+
+
+</style>
