@@ -1,1 +1,23 @@
-@import "tailwindcss";
+@tailwind utilities;
+
+/* CSS Reset para corregir proporciones y dimensiones */
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  /* Clase específica para el botón circular de tareas */
+  .task-circle-button {
+    min-width: 24px;
+    min-height: 24px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+}

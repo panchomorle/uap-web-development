@@ -1,3 +1,5 @@
+import type { State } from "./types";
+
 const example_tasks = [
     {
         id: 1,
@@ -21,7 +23,7 @@ const example_tasks = [
     },
 ]
 
-export const state = {
+export const state: State = {
     tasks: [...example_tasks],
     filter: "all"
   };

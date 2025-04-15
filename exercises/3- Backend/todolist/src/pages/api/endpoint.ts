@@ -1,17 +1,6 @@
 import { state } from '../../state';
 import type { APIRoute } from "astro";
 
-interface Actions{
-	done: string | undefined;
-	undone: string | undefined;
-	all: string | undefined;
-	addTask: string | undefined;
-	taskText: string | FormDataEntryValue | undefined;
-	completeTask: string | undefined;
-	deleteTask: string | undefined;
-	clearCompleted: string | undefined;
-}
-
 const parseFormData = async (request: Request): Promise<Actions> => {
 	const formData = await request.formData();
 	const done = formData.get("done")?.toString();
@@ -23,19 +12,55 @@ const parseFormData = async (request: Request): Promise<Actions> => {
 	const deleteTask = formData.get("deleteTask")?.toString();
 	const clearCompleted = formData.get("clearCompleted")?.toString();
 	return { done, undone, all, addTask, taskText, completeTask, deleteTask, clearCompleted };
-  };
+};
 
 const parseJson = async (request: Request): Promise<Actions> => {
-	return await request.json();
-  };
+	try {
+		const data = await request.json();
+		console.log("Received JSON data:", data);
+		return data;
+	} catch (error) {
+		console.error("Error parsing JSON:", error);
+		// Devolver un objeto vacío que cumpla con la estructura Actions
+		return {
+			done: undefined,
+			undone: undefined,
+			all: undefined,
+			addTask: undefined,
+			taskText: undefined,
+			completeTask: undefined,
+			deleteTask: undefined,
+			clearCompleted: undefined
+		};
+	}
+};
+
+export const GET: APIRoute = async () => {
+	return new Response(JSON.stringify({ state }), {
+	  headers: { "Content-Type": "application/json" },
+	});
+};
 
 export const POST: APIRoute = async ({ request, redirect }) => {
-	const contentType = request.headers.get("content-type");
+	const contentType = request.headers.get("content-type") || "";
 	try {
-		const { done, undone, all, addTask, taskText, completeTask, deleteTask, clearCompleted } =
-		contentType==="application/x-www-form-urlencoded"
-		? await parseFormData(request)
-		: await parseJson(request);
+		let actions: Actions;
+
+		// Verificar si el tipo de contenido contiene application/json
+		if (contentType.includes("application/json")) {
+			actions = await parseJson(request);
+		} 
+		// Si es un formulario o cualquier otro tipo de contenido
+		else {
+			try {
+				actions = await parseFormData(request);
+			} catch (formError) {
+				console.error("Error parsing form data:", formError);
+				return new Response("Invalid form data", { status: 400 });
+			}
+		}
+
+		const { done, undone, all, addTask, taskText, completeTask, deleteTask, clearCompleted } = actions;
 
 		if (done) {
 			state.filter = "done";
@@ -65,16 +90,17 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 			state.tasks = state.tasks.filter(task => !task.completed);
 		}
 	} catch (error) {
-		console.error("Error processing form data:", error);
+		console.error("Error processing request:", error);
+		return new Response("Error processing request", { status: 500 });
 	}
-	if (contentType === "application/x-www-form-urlencoded") {
+
+	// Determinar tipo de respuesta basado en el tipo de contenido de la solicitud
+	if (contentType.includes("application/json")) {
+		return new Response(JSON.stringify({ state }), {
+			status: 200,
+			headers: { "Content-Type": "application/json" },
+		});
+	} else {
 		return redirect("/");
-	  }
-	if (contentType === "application/json") {
-	return new Response(JSON.stringify(state), {
-		status: 200,
-		headers: { "Content-Type": "application/json" },
-	});
 	}
-	return new Response("Invalid content type", { status: 400 });
 }

@@ -1,251 +1,254 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { state } from '../state';
+
+// Obtener el filtro actual de la URL si existe, sino usar el del estado
+const url = Astro.url;
+const urlFilter = url.searchParams.get('filter');
+if (urlFilter && ['all', 'done', 'undone'].includes(urlFilter)) {
+  state.filter = urlFilter;
+}
+
+// Función para aplicar clases condicionales a los filtros
+const getFilterClass = (filterName: string) => {
+  const baseClass = "flex-1 py-[15px] bg-transparent border-none text-lg text-[#999] cursor-pointer relative text-center hover:text-[#333]";
+  return filterName === state.filter 
+    ? `${baseClass} after:content-[''] after:absolute after:bottom-[-2px] after:left-1/2 after:transform after:-translate-x-1/2 after:w-[90%] after:h-[2px] after:bg-[#e8994a]` 
+    : baseClass;
+};
 ---
 
 <Layout>
-	<main class="container">
-        <header>
-            <h1 class="header-title"><span class="title-gray">ToDo</span><span class="title-orange">List</span></h1>
+  <main class="w-full flex flex-col gap-[15px] max-w-[600px] mx-auto font-sans">
+    <header class="text-center bg-[#f2efe8]">
+      <h1 class="text-[42px] font-bold py-[15px]"><span class="text-[#6b6b6b]">ToDo</span><span class="text-[#e8994a]">List</span></h1>
 
-			<form action="/api/play" method="POST" class="tabs">
-                <button class="tab active" id="personal-tab" name="done" value="done">Done</button>
-                <button class="tab" id="professional-tab" name="undone" value="undone">Undone</button>
-                <button class="tab" id="professional-tab" name="all" value="all">All</button>
-                <button class="add-button">+</button>
-			</form>
-
-        </header>
-        
-        <form action="/api/play" method="POST" class="todo-input">
-            <input type="text" id="todo-input" name="taskInput" placeholder="What do you want to do?">
-            <button type="submit" class="add-todo-button" name="addTask" value="true">ADD</button>
-        </form>
-        
-        <form action="/api/play" method="POST" class="todo-list" id="todo-list">
-            {
-				state.tasks.map((task)=>{
-					if (state.filter === "done" && !task.completed) return null;
-					if (state.filter === "undone" && task.completed) return null;
-					return (
-						<div class="todo-item" id={String(task.id)}>
-							<button type="submit" name="completeTask" value={task.id}
-							class={`todo-check ${task.completed ? 'checked' : ''}`}></button>
-							<p class={`todo-text ${task.completed ? 'completed-text' : ''}`}>{task.text}</p>
-							<button type="submit" name="deleteTask" value={task.id}
-							class="delete-button">X</button>
-						</div>
-					)
-				})
-			}
-            
-        </form>
-        <form action="/api/play" class="clear-section" method="POST">
-            <button class="clear-completed-button" name="clearCompleted" value="true">Clear Completed</button>
-		</form>
-    </main>
+      <div class="flex relative">
+        <a href="/?filter=done" class={getFilterClass('done')} data-filter="done">Done</a>
+        <a href="/?filter=undone" class={getFilterClass('undone')} data-filter="undone">Undone</a>
+        <a href="/?filter=all" class={getFilterClass('all')} data-filter="all">All</a>
+        <button class="absolute right-0 top-0 w-[50px] h-[50px] bg-[#a87979] text-white border-none text-2xl cursor-pointer flex items-center justify-center">+</button>
+      </div>
+    </header>
+    
+    <form name="addTask" action="/api/addTask" method="POST" class="flex mx-5 my-5 shadow-md rounded-[20px] overflow-hidden">
+      <input type="text" id="todo-input" name="taskInput" placeholder="What do you want to do?" class="flex-1 py-[15px] px-5 border-none bg-[#f1ece6] text-base rounded-none placeholder-[#aaa]">
+      <button type="submit" class="py-[15px] px-[30px] bg-[#7ab4c6] text-white border-none font-bold cursor-pointer" value="true">ADD</button>
+    </form>
+    
+    <div class="bg-[#f1ece6] rounded-[20px] mx-5 my-5 shadow-md overflow-hidden" id="todo-list">
+      {
+        state.tasks.map((task)=> {
+          if (state.filter === "done" && !task.completed) return null;
+          if (state.filter === "undone" && task.completed) return null;
+          return (
+            <div class="flex items-center p-[15px] border-b border-[#e0dcd6] last:border-b-0" id={String(task.id)}>
+              <form action="/api/completeTask" method="POST" name="completeTask">
+                <input type="hidden" name="taskId" value={task.id} />
+                <button type="submit" value={task.id}
+                class={`task-circle-button border-2 ${task.completed ? 'border-[#e8994a] bg-[#e8994a]' : 'border-[#888] bg-transparent'} cursor-pointer relative ${task.completed ? 'after:content-[""] after:absolute after:top-1/2 after:left-1/2 after:w-[6px] after:h-[10px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45 after:-translate-x-1/2 after:-translate-y-1/2' : ''}`}></button>
+              </form>
+              <p class={`flex-1 text-base px-[10px] ${task.completed ? 'text-[#aaa] line-through' : 'text-[#333]'}`}>{task.text}</p>
+              <form action="/api/deleteTask" method="POST" name="deleteTask">
+                <input type="hidden" name="taskId" value={task.id} />
+                <button type="submit" value={task.id}
+                class="w-5 h-5 bg-transparent border-none cursor-pointer relative opacity-50">X</button>
+              </form>
+            </div>
+          )
+        })
+      }
+      
+    </div>
+    <form name="clearCompleted" action="/api/clearCompleted" class="flex justify-end py-[10px]" method="POST">
+      <button class="bg-transparent mx-5 my-5 border-none text-[#e8994a] cursor-pointer text-base" value="true">Clear Completed</button>
+    </form>
+  </main>
 </Layout>
 
-<style>
-	* {
-		margin: 0;
-		padding: 0;
-		box-sizing: border-box;
-		font-family: Arial, sans-serif;
-	}
+<script>
+import type { State, Task } from "../types";
 
+  // Función para manejar el envío de formularios
+  async function handleFormSubmit(e: SubmitEvent) {
+    e.preventDefault();
+    
+    const form = e.target as HTMLFormElement | null;
+    if (!form) {
+      console.error('El evento no tiene un formulario válido como objetivo.');
+      return;
+    }
+    
+    // Extraer el método del formulario (POST por defecto)
+    const method = form.getAttribute('method') || 'POST';
+    
+    try {
+      let response;
+      const url = form.getAttribute('action');
+      const formName = form.getAttribute('name');
+      
+      if (!url) {
+        console.error('El atributo "action" del formulario no está definido.');
+        return;
+      }
+      
+      const formData = new FormData(form);
+      const formObject = Object.fromEntries(formData.entries());
+      const jsonString = JSON.stringify(formObject);
+      
+      console.log("FormData sent to endpoint", jsonString);
+      
+      // Enviar datos con fetch
+      response = await fetch(url, {
+        method,
+        body: jsonString,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      
+      if (response.ok) {
+        console.log("formName: ", formName);
+        
+        // Clonar response para poder leerlo múltiples veces
+        const clonedResponse = response.clone();
+        const responseData = await clonedResponse.json();
+        
+        if (formName === "completeTask") {
+          updateTaskList(responseData.state);
+        }
+        else if (formName === "deleteTask") {
+          const taskId = formData.get('taskId');
+          const taskElement = document.getElementById(String(taskId ?? ''));
+          if (taskElement) {
+            taskElement.remove();
+          }
+        }
+        else if (formName === "clearCompleted") {
+          document.querySelectorAll('.line-through').forEach(task => {
+            const taskElement = task.closest('div[id]');
+            if (taskElement) {
+              taskElement.remove();
+            }
+          });
+        }
+        else if (formName === "addTask") {
+          // Actualizar la lista de tareas tras añadir una nueva
+          updateTaskList(responseData.state);
+        }
+        
+      } else {
+        console.error('Error al procesar la solicitud:', response.status);
+      }
+    } catch (error) {
+      console.error('Error en handleFormSubmit:', error);
+      
+      // Si hay un error en la manipulación de JavaScript, permitir que el formulario se envíe normalmente
+      if (form) {
+        form.removeEventListener('submit', handleFormSubmit);
+        setTimeout(() => {
+          form.submit();
+        }, 0);
+      }
+    }
+  }
 
-	.container {
-    width: 100%;
-    max-width: 600px;
-    margin: 0 auto;
-	}
+  // Función para añadir listeners a los formularios
+  function attachFormListeners(container: Document | HTMLElement = document) {
+    const forms = container.querySelectorAll('form');
+    forms.forEach(form => {
+      // Eliminar listeners existentes para evitar duplicados
+      form.removeEventListener('submit', handleFormSubmit);
+      // Añadir el nuevo listener
+      form.addEventListener('submit', handleFormSubmit);
+    });
+  }
 
+  // Manejador para los enlaces de filtrado
+  function attachFilterListeners() {
+    const filterLinks = document.querySelectorAll('[data-filter]');
+    filterLinks.forEach(link => {
+      link.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const filter = link.getAttribute('data-filter');
+        
+        try {
+          const response = await fetch(`/api/filter?filter=${filter}`, {
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            
+            const url = new URL(window.location.toString());
+            url.searchParams.set('filter', filter ?? 'all');
+            window.history.pushState({}, '', url);
+            
+            // Actualizar clases de los filtros
+            filterLinks.forEach(l => {
+              l.classList.remove('after:content-[\'\']', 'after:absolute', 'after:bottom-[-2px]', 
+                'after:left-1/2', 'after:transform', 'after:-translate-x-1/2', 'after:w-[90%]', 'after:h-[2px]', 
+                'after:bg-[#e8994a]');
+            });
+            link.classList.add('after:content-[\'\']', 'after:absolute', 'after:bottom-[-2px]', 
+              'after:left-1/2', 'after:transform', 'after:-translate-x-1/2', 'after:w-[90%]', 'after:h-[2px]', 
+              'after:bg-[#e8994a]');
+            
+            updateTaskList(data);
+          }
+        } catch (error) {
+          console.error('Error al filtrar tareas:', error);
+        }
+      });
+    });
+  }
 
-	/* Header */
-	header {
-		text-align: center;
-		background-color: #f2efe8;
-	}
+  // Función para actualizar la lista de tareas en el DOM
+  function updateTaskList(data: State) {
+    const todoList = document.getElementById('todo-list');
+    if (!todoList) return;
+    
+    todoList.innerHTML = '';
+    
+    // Filtrar las tareas según el filtro activo
+    const filteredTasks = data.tasks.filter(task => {
+      if (data.filter === "done") return task.completed;
+      if (data.filter === "undone") return !task.completed;
+      return true; // "all"
+    });
+    
+    filteredTasks.forEach(task => {
+      const taskElement = document.createElement('div');
+      taskElement.className = 'flex items-center p-[15px] border-b border-[#e0dcd6] last:border-b-0';
+      taskElement.id = String(task.id);
+      
+      taskElement.innerHTML = `
+        <form action="/api/completeTask" method="POST" name="completeTask">
+          <input type="hidden" name="taskId" value="${task.id}" />
+          <button type="submit" value="${task.id}"
+          class="task-circle-button border-2 ${task.completed ? 'border-[#e8994a] bg-[#e8994a]' : 'border-[#888] bg-transparent'} cursor-pointer relative ${task.completed ? 'after:content-[\'\'] after:absolute after:top-1/2 after:left-1/2 after:w-[6px] after:h-[10px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45 after:-translate-x-1/2 after:-translate-y-1/2' : ''}"></button>
+        </form>
+        <p class="flex-1 text-base px-[10px] ${task.completed ? 'text-[#aaa] line-through' : 'text-[#333]'}">${task.text}</p>
+        <form action="/api/deleteTask" method="POST" name="deleteTask">
+          <input type="hidden" name="taskId" value="${task.id}" />
+          <button type="submit" value="${task.id}"
+          class="w-5 h-5 bg-transparent border-none cursor-pointer relative opacity-50">X</button>
+        </form>
+      `;
+      
+      todoList.appendChild(taskElement);
+    });
+    
+    // Aplicar listeners a los nuevos formularios
+    attachFormListeners(todoList);
+  }
 
-	h1 {
-		font-size: 42px;
-		font-weight: bold;
-	}
-
-	.header-title {
-		padding: 20px 0;
-	}
-
-	.title-gray {
-		color: #6b6b6b;
-	}
-
-	.title-orange {
-		color: #e8994a;
-	}
-
-	/* Tab */
-	.tabs {
-		display: flex;
-		position: relative;
-		border-bottom: 2px solid #e8994a;
-	}
-
-	.tab {
-		flex: 1;
-		padding: 15px;
-		background: transparent;
-		border: none;
-		font-size: 18px;
-		color: #999;
-		cursor: pointer;
-		position: relative;
-		text-align: center;
-	}
-
-	.tab.active {
-		color: #333;
-		font-weight: bold;
-	}
-
-	.tab.active::after {
-		content: '';
-		position: absolute;
-		bottom: -2px;
-		left: 0;
-		width: 100%;
-		height: 2px;
-		background-color: #e8994a;
-	}
-
-	.add-button {
-		position: absolute;
-		right: 0;
-		top: 0;
-		width: 50px;
-		height: 50px;
-		background-color: #a87979;
-		color: white;
-		border: none;
-		font-size: 24px;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	/* Input area styles */
-	.todo-input {
-		display: flex;
-		margin: 20px;
-		box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-		border-radius: 20px;
-		overflow: hidden;
-	}
-
-	#todo-input {
-		flex: 1;
-		padding: 15px 20px;
-		border: none;
-		background-color: #f1ece6;
-		font-size: 16px;
-		border-radius: 0;
-	}
-
-	#todo-input::placeholder {
-		color: #aaa;
-	}
-
-	.add-todo-button {
-		padding: 15px 30px;
-		background-color: #7ab4c6;
-		color: white;
-		border: none;
-		font-weight: bold;
-		cursor: pointer;
-	}
-
-	/* Todo list styles */
-	.todo-list {
-		background-color: #f1ece6;
-		border-radius: 20px;
-		margin: 20px;
-		box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-		overflow: hidden;
-	}
-
-	.todo-item {
-		display: flex;
-		align-items: center;
-		padding: 15px 20px;
-		border-bottom: 1px solid #e0dcd6;
-	}
-
-	.todo-item:last-child {
-		border-bottom: none;
-	}
-
-	.todo-check {
-		width: 24px;
-		height: 24px;
-		border: 2px solid #888;
-		border-radius: 50%;
-		margin-right: 15px;
-		cursor: pointer;
-		position: relative;
-	}
-
-	.todo-check.checked {
-		border-color: #e8994a;
-		background-color: #e8994a;
-	}
-
-	.todo-check.checked::after {
-		content: '';
-		position: absolute;
-		top: 3px;
-		left: 7px;
-		width: 6px;
-		height: 12px;
-		border: solid white;
-		border-width: 0 2px 2px 0;
-		transform: rotate(45deg);
-	}
-
-	.todo-text {
-		flex: 1;
-		font-size: 16px;
-		color: #333;
-	}
-
-	.completed-text {
-		color: #aaa;
-		text-decoration: line-through;
-	}
-
-	.delete-button {
-		width: 20px;
-		height: 20px;
-		background-color: transparent;
-		border: none;
-		cursor: pointer;
-		position: relative;
-		opacity: 0.5;
-	}
-
-	.clear-section {
-		display: flex;
-		justify-content: flex-end;
-		padding: 10px 0;
-	}
-
-	.clear-completed-button {
-		background: transparent;
-		margin: 20px;
-		border: none;
-		color: #e8994a;
-		cursor: pointer;
-		font-size: 16px;
-	}
-</style>
+  // Inicialización
+  document.addEventListener('DOMContentLoaded', () => {
+    attachFormListeners();
+    attachFilterListeners();
+  });
+</script>
