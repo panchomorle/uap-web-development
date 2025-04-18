@@ -1,5 +1,6 @@
 import { state } from '../../state';
 import type { APIRoute } from "astro";
+import { handleResponse, handleError } from '../../utils/apiUtils';
 
 export const GET: APIRoute = async () => {
     return new Response(JSON.stringify({ state }), {
@@ -10,18 +11,18 @@ export const GET: APIRoute = async () => {
 export const POST: APIRoute = async ({ request, redirect }) => {
     const contentType = request.headers.get("content-type") || "";
     try {
+        // Filtrar las tareas no completadas
+        const previousCount = state.tasks.length;
         state.tasks = state.tasks.filter(task => !task.completed);
+        const removedCount = previousCount - state.tasks.length;
+        
+        const message = removedCount > 0 
+            ? `Se eliminaron ${removedCount} tareas completadas` 
+            : "No había tareas completadas para eliminar";
+        
+        return handleResponse(contentType, redirect, { state }, message);
     } catch (error) {
         console.error("Error processing request:", error);
-        return new Response("Error processing request", { status: 500 });
-    }
-    // Determinar tipo de respuesta basado en el tipo de contenido de la solicitud
-    if (contentType.includes("application/json")) {
-        return new Response(JSON.stringify({ state }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-        });
-    } else {
-        return redirect("/");
+        return handleError(contentType, redirect, "Error al eliminar tareas completadas", 500);
     }
 }

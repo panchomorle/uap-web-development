@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import Notification from '../components/Notification.astro';
 import { state } from '../state';
 
 // Obtener el filtro actual de la URL si existe, sino usar el del estado
@@ -9,9 +10,13 @@ if (urlFilter && ['all', 'done', 'undone'].includes(urlFilter)) {
   state.filter = urlFilter;
 }
 
+// Capturar mensajes de error o éxito desde los parámetros de URL
+const errorMsg = url.searchParams.get('error');
+const successMsg = url.searchParams.get('success');
+
 // Función para aplicar clases condicionales a los filtros
 const getFilterClass = (filterName: string) => {
-  const baseClass = "flex-1 py-[15px] bg-transparent border-none text-lg text-[#999] cursor-pointer relative text-center hover:text-[#333]";
+  const baseClass = "flex-1 py-[15px] bg-transparent no-underline border-none text-lg text-[#999] cursor-pointer relative text-center hover:text-[#333]";
   return filterName === state.filter 
     ? `${baseClass} after:content-[''] after:absolute after:bottom-[-2px] after:left-1/2 after:transform after:-translate-x-1/2 after:w-[90%] after:h-[2px] after:bg-[#e8994a]` 
     : baseClass;
@@ -19,55 +24,203 @@ const getFilterClass = (filterName: string) => {
 ---
 
 <Layout>
+  <!-- Componente de notificación para errores -->
+  <Notification 
+    message={errorMsg || ''} 
+    type="error" 
+    show={Boolean(errorMsg)} 
+  />
+  
+  <!-- Componente de notificación para mensajes de éxito -->
+  <Notification 
+    message={successMsg || ''} 
+    type="success" 
+    show={Boolean(successMsg)} 
+  />
+  
   <main class="w-full flex flex-col gap-[15px] max-w-[600px] mx-auto font-sans">
     <header class="text-center bg-[#f2efe8]">
       <h1 class="text-[42px] font-bold py-[15px]"><span class="text-[#6b6b6b]">ToDo</span><span class="text-[#e8994a]">List</span></h1>
 
-      <div class="flex relative">
-        <a href="/?filter=done" class={getFilterClass('done')} data-filter="done">Done</a>
-        <a href="/?filter=undone" class={getFilterClass('undone')} data-filter="undone">Undone</a>
-        <a href="/?filter=all" class={getFilterClass('all')} data-filter="all">All</a>
-        <button class="absolute right-0 top-0 w-[50px] h-[50px] bg-[#a87979] text-white border-none text-2xl cursor-pointer flex items-center justify-center">+</button>
-      </div>
+      <nav aria-label="Filtros de tareas" class="flex relative">
+        <a href="/?filter=done" class={getFilterClass('done')} data-filter="done">Completadas</a>
+        <a href="/?filter=undone" class={getFilterClass('undone')} data-filter="undone">Pendientes</a>
+        <a href="/?filter=all" class={getFilterClass('all')} data-filter="all">Todas</a>
+        <button 
+          class="absolute right-0 top-0 w-[50px] h-[50px] bg-[#a87979] text-white border-none text-2xl cursor-pointer flex items-center justify-center" 
+          aria-label="Agregar tarea"
+        >+</button>
+      </nav>
     </header>
     
-    <form name="addTask" action="/api/addTask" method="POST" class="flex mx-5 my-5 shadow-md rounded-[20px] overflow-hidden">
-      <input type="text" id="todo-input" name="taskInput" placeholder="What do you want to do?" class="flex-1 py-[15px] px-5 border-none bg-[#f1ece6] text-base rounded-none placeholder-[#aaa]">
-      <button type="submit" class="py-[15px] px-[30px] bg-[#7ab4c6] text-white border-none font-bold cursor-pointer" value="true">ADD</button>
+    <form 
+      name="addTask" 
+      action="/api/addTask" 
+      method="POST" 
+      class="flex mx-5 my-5 shadow-md rounded-[20px] overflow-hidden"
+      aria-label="Formulario para agregar tarea"
+    >
+      <label for="todo-input" class="sr-only">Nueva tarea</label>
+      <input 
+        type="text" 
+        id="todo-input" 
+        name="taskInput" 
+        placeholder="¿Qué quieres hacer?" 
+        class="flex-1 py-[15px] px-[5px] border-none bg-[#f1ece6] text-base rounded-none outline-hidden placeholder-[#aaa]"
+        required
+        maxlength="200"
+        aria-required="true"
+      >
+      <button 
+        type="submit" 
+        class="py-[15px] px-[30px] bg-[#7ab4c6] text-white border-none font-bold cursor-pointer" 
+        value="true"
+      >AGREGAR</button>
     </form>
     
-    <div class="bg-[#f1ece6] rounded-[20px] mx-5 my-5 shadow-md overflow-hidden" id="todo-list">
+    <section 
+      class="bg-[#f1ece6] rounded-[20px] mx-5 my-5 shadow-md overflow-hidden" 
+      id="todo-list"
+      aria-label="Lista de tareas"
+    >
       {
         state.tasks.map((task)=> {
           if (state.filter === "done" && !task.completed) return null;
           if (state.filter === "undone" && task.completed) return null;
           return (
-            <div class="flex items-center p-[15px] border-b border-[#e0dcd6] last:border-b-0" id={String(task.id)}>
+            <article 
+              class="flex items-center p-[15px] border-b border-[#e0dcd6] last:border-b-0" 
+              id={String(task.id)}
+              aria-label={`Tarea: ${task.text}`}
+            >
               <form action="/api/completeTask" method="POST" name="completeTask">
                 <input type="hidden" name="taskId" value={task.id} />
-                <button type="submit" value={task.id}
-                class={`task-circle-button border-2 ${task.completed ? 'border-[#e8994a] bg-[#e8994a]' : 'border-[#888] bg-transparent'} cursor-pointer relative ${task.completed ? 'after:content-[""] after:absolute after:top-1/2 after:left-1/2 after:w-[6px] after:h-[10px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45 after:-translate-x-1/2 after:-translate-y-1/2' : ''}`}></button>
+                <button 
+                  type="submit" 
+                  value={task.id}
+                  class={`task-circle-button border-2 ${task.completed ? 'border-[#e8994a] bg-[#e8994a]' : 'border-[#888] bg-transparent'} cursor-pointer relative ${task.completed ? 'after:content-[""] after:absolute after:top-1/2 after:left-1/2 after:w-[6px] after:h-[10px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45 after:-translate-x-1/2 after:-translate-y-1/2' : ''}`}
+                  aria-label={task.completed ? "Marcar como pendiente" : "Marcar como completada"}
+                  aria-pressed={task.completed}
+                ></button>
               </form>
-              <p class={`flex-1 text-base px-[10px] ${task.completed ? 'text-[#aaa] line-through' : 'text-[#333]'}`}>{task.text}</p>
+              <p 
+                class={`flex-1 text-base px-[10px] ${task.completed ? 'text-[#aaa] line-through' : 'text-[#333]'}`}
+              >{task.text}</p>
               <form action="/api/deleteTask" method="POST" name="deleteTask">
                 <input type="hidden" name="taskId" value={task.id} />
-                <button type="submit" value={task.id}
-                class="w-5 h-5 bg-transparent border-none cursor-pointer relative opacity-50">X</button>
+                <button 
+                  type="submit" 
+                  value={task.id}
+                  class="w-5 h-5 bg-transparent border-none cursor-pointer relative opacity-50"
+                  aria-label="Eliminar tarea"
+                >X</button>
               </form>
-            </div>
+            </article>
           )
         })
       }
-      
-    </div>
+    </section>
+    
     <form name="clearCompleted" action="/api/clearCompleted" class="flex justify-end py-[10px]" method="POST">
-      <button class="bg-transparent mx-5 my-5 border-none text-[#e8994a] cursor-pointer text-base" value="true">Clear Completed</button>
+      <button 
+        class="bg-transparent mx-5 my-5 border-none text-[#e8994a] cursor-pointer text-base" 
+        value="true"
+        aria-label="Limpiar tareas completadas"
+      >Limpiar completadas</button>
     </form>
   </main>
 </Layout>
 
 <script>
 import type { State, Task } from "../types";
+import type { ApiResponse } from "../utils/apiUtils";
+
+  // Función para mostrar notificaciones dinámicas
+  function showNotification(message: string, type: 'success' | 'error' | 'info') {
+    // Crear elemento de notificación
+    const notification = document.createElement('div');
+    notification.id = 'dynamic-notification';
+    notification.className = `fixed top-4 right-4 px-4 py-3 rounded-lg shadow-md transition-opacity duration-300 z-50`;
+    
+    // Establecer colores según el tipo
+    let bgColor = '';
+    let textColor = '';
+    
+    switch (type) {
+      case 'success':
+        bgColor = 'bg-green-100';
+        textColor = 'text-green-800';
+        break;
+      case 'error':
+        bgColor = 'bg-red-100';
+        textColor = 'text-red-800';
+        break;
+      case 'info':
+      default:
+        bgColor = 'bg-blue-100';
+        textColor = 'text-blue-800';
+        break;
+    }
+    
+    notification.classList.add(bgColor, textColor);
+    
+    // Contenido de la notificación
+    notification.innerHTML = `
+      <div class="flex items-center">
+        <span class="mr-2">
+          ${type === 'success' 
+            ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>'
+            : type === 'error'
+              ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>'
+              : '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zm-1 7a1 1 0 100 2h.01a1 1 0 100-2H10z" clip-rule="evenodd" /></svg>'
+          }
+        </span>
+        <span>${message}</span>
+        <button 
+          id="close-dynamic-notification" 
+          type="button" 
+          class="ml-auto -mx-1.5 -my-1.5 rounded-lg p-1.5 inline-flex h-8 w-8 hover:bg-gray-200 focus:outline-none"
+          aria-label="Cerrar"
+        >
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+          </svg>
+        </button>
+      </div>
+    `;
+    
+    // Eliminar notificación si ya existe
+    const existingNotification = document.getElementById('dynamic-notification');
+    if (existingNotification) {
+      document.body.removeChild(existingNotification);
+    }
+    
+    // Agregar notificación al cuerpo
+    document.body.appendChild(notification);
+    
+    // Agregar evento al botón de cerrar
+    const closeButton = document.getElementById('close-dynamic-notification');
+    if (closeButton) {
+      closeButton.addEventListener('click', () => {
+        notification.classList.add('opacity-0');
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 300);
+      });
+    }
+    
+    // Auto-cerrar después de 5 segundos
+    setTimeout(() => {
+      if (document.body.contains(notification)) {
+        notification.classList.add('opacity-0');
+        setTimeout(() => {
+          if (document.body.contains(notification)) {
+            document.body.removeChild(notification);
+          }
+        }, 300);
+      }
+    }, 5000);
+  }
 
   // Función para manejar el envío de formularios
   async function handleFormSubmit(e: SubmitEvent) {
@@ -92,11 +245,23 @@ import type { State, Task } from "../types";
         return;
       }
       
+      // Realizar validación del formulario según su tipo
+      if (formName === 'addTask') {
+        const taskInput = form.querySelector('input[name="taskInput"]') as HTMLInputElement;
+        if (!taskInput || !taskInput.value.trim()) {
+          showNotification('El texto de la tarea no puede estar vacío', 'error');
+          return;
+        }
+        
+        if (taskInput.value.length > 200) {
+          showNotification('El texto de la tarea no puede exceder los 200 caracteres', 'error');
+          return;
+        }
+      }
+      
       const formData = new FormData(form);
       const formObject = Object.fromEntries(formData.entries());
       const jsonString = JSON.stringify(formObject);
-      
-      console.log("FormData sent to endpoint", jsonString);
       
       // Enviar datos con fetch
       response = await fetch(url, {
@@ -109,40 +274,63 @@ import type { State, Task } from "../types";
       });
       
       if (response.ok) {
-        console.log("formName: ", formName);
-        
-        // Clonar response para poder leerlo múltiples veces
         const clonedResponse = response.clone();
-        const responseData = await clonedResponse.json();
+        const responseData = await clonedResponse.json() as ApiResponse;
         
-        if (formName === "completeTask") {
-          updateTaskList(responseData.state);
-        }
-        else if (formName === "deleteTask") {
-          const taskId = formData.get('taskId');
-          const taskElement = document.getElementById(String(taskId ?? ''));
-          if (taskElement) {
-            taskElement.remove();
+        // Comprobar el formato de respuesta estandarizado
+        if (responseData.success) {
+          // Mostrar notificación de éxito
+          showNotification(responseData.message || 'Operación completada con éxito', 'success');
+          
+          // Realizar acciones específicas según el formulario
+          if (formName === "completeTask") {
+            if (responseData.data?.state) {
+              updateTaskList(responseData.data.state);
+            }
           }
-        }
-        else if (formName === "clearCompleted") {
-          document.querySelectorAll('.line-through').forEach(task => {
-            const taskElement = task.closest('div[id]');
+          else if (formName === "deleteTask") {
+            const taskId = formData.get('taskId');
+            const taskElement = document.getElementById(String(taskId ?? ''));
             if (taskElement) {
               taskElement.remove();
             }
-          });
+          }
+          else if (formName === "clearCompleted") {
+            document.querySelectorAll('.line-through').forEach(task => {
+              const taskElement = task.closest('article[id]');
+              if (taskElement) {
+                taskElement.remove();
+              }
+            });
+          }
+          else if (formName === "addTask") {
+            // Limpiar el campo de entrada después de agregar
+            const taskInput = form.querySelector('input[name="taskInput"]') as HTMLInputElement;
+            if (taskInput) {
+              taskInput.value = '';
+            }
+            
+            // Actualizar la lista de tareas tras añadir una nueva
+            if (responseData.data?.state) {
+              updateTaskList(responseData.data.state);
+            }
+          }
+        } else {
+          // Mostrar notificación de error
+          showNotification(responseData.error || 'Ha ocurrido un error', 'error');
         }
-        else if (formName === "addTask") {
-          // Actualizar la lista de tareas tras añadir una nueva
-          updateTaskList(responseData.state);
-        }
-        
       } else {
-        console.error('Error al procesar la solicitud:', response.status);
+        // Obtener mensaje de error del servidor si es posible
+        try {
+          const errorData = await response.json() as ApiResponse;
+          showNotification(errorData.error || `Error: ${response.status}`, 'error');
+        } catch (parseError) {
+          showNotification(`Error al procesar la solicitud: ${response.status}`, 'error');
+        }
       }
     } catch (error) {
       console.error('Error en handleFormSubmit:', error);
+      showNotification('Error al procesar la solicitud', 'error');
       
       // Si hay un error en la manipulación de JavaScript, permitir que el formulario se envíe normalmente
       if (form) {
@@ -181,26 +369,35 @@ import type { State, Task } from "../types";
           });
           
           if (response.ok) {
-            const data = await response.json();
+            const responseData = await response.json() as ApiResponse;
             
-            const url = new URL(window.location.toString());
-            url.searchParams.set('filter', filter ?? 'all');
-            window.history.pushState({}, '', url);
-            
-            // Actualizar clases de los filtros
-            filterLinks.forEach(l => {
-              l.classList.remove('after:content-[\'\']', 'after:absolute', 'after:bottom-[-2px]', 
+            // Verificar el formato de respuesta estandarizado
+            if (responseData.success && responseData.data) {
+              const url = new URL(window.location.toString());
+              url.searchParams.set('filter', filter ?? 'all');
+              window.history.pushState({}, '', url);
+              
+              // Actualizar clases de los filtros
+              filterLinks.forEach(l => {
+                l.classList.remove('after:content-[\'\']', 'after:absolute', 'after:bottom-[-2px]', 
+                  'after:left-1/2', 'after:transform', 'after:-translate-x-1/2', 'after:w-[90%]', 'after:h-[2px]', 
+                  'after:bg-[#e8994a]');
+              });
+              link.classList.add('after:content-[\'\']', 'after:absolute', 'after:bottom-[-2px]', 
                 'after:left-1/2', 'after:transform', 'after:-translate-x-1/2', 'after:w-[90%]', 'after:h-[2px]', 
                 'after:bg-[#e8994a]');
-            });
-            link.classList.add('after:content-[\'\']', 'after:absolute', 'after:bottom-[-2px]', 
-              'after:left-1/2', 'after:transform', 'after:-translate-x-1/2', 'after:w-[90%]', 'after:h-[2px]', 
-              'after:bg-[#e8994a]');
-            
-            updateTaskList(data);
+              
+              updateTaskList(responseData.data.state);
+              showNotification(`Mostrando tareas ${filter === 'done' ? 'completadas' : filter === 'undone' ? 'pendientes' : 'todas'}`, 'info');
+            } else {
+              showNotification(responseData.error || 'Error al filtrar tareas', 'error');
+            }
+          } else {
+            showNotification('Error al filtrar tareas', 'error');
           }
         } catch (error) {
           console.error('Error al filtrar tareas:', error);
+          showNotification('Error al filtrar tareas', 'error');
         }
       });
     });
@@ -220,22 +417,44 @@ import type { State, Task } from "../types";
       return true; // "all"
     });
     
+    if (filteredTasks.length === 0) {
+      const emptyMessage = document.createElement('p');
+      emptyMessage.className = 'p-4 text-center text-gray-500';
+      emptyMessage.textContent = data.filter === "done" 
+        ? 'No hay tareas completadas' 
+        : data.filter === "undone" 
+          ? 'No hay tareas pendientes' 
+          : 'No hay tareas';
+      todoList.appendChild(emptyMessage);
+      return;
+    }
+    
     filteredTasks.forEach(task => {
-      const taskElement = document.createElement('div');
+      const taskElement = document.createElement('article');
       taskElement.className = 'flex items-center p-[15px] border-b border-[#e0dcd6] last:border-b-0';
       taskElement.id = String(task.id);
+      taskElement.setAttribute('aria-label', `Tarea: ${task.text}`);
       
       taskElement.innerHTML = `
         <form action="/api/completeTask" method="POST" name="completeTask">
           <input type="hidden" name="taskId" value="${task.id}" />
-          <button type="submit" value="${task.id}"
-          class="task-circle-button border-2 ${task.completed ? 'border-[#e8994a] bg-[#e8994a]' : 'border-[#888] bg-transparent'} cursor-pointer relative ${task.completed ? 'after:content-[\'\'] after:absolute after:top-1/2 after:left-1/2 after:w-[6px] after:h-[10px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45 after:-translate-x-1/2 after:-translate-y-1/2' : ''}"></button>
+          <button 
+            type="submit" 
+            value="${task.id}"
+            class="task-circle-button border-2 ${task.completed ? 'border-[#e8994a] bg-[#e8994a]' : 'border-[#888] bg-transparent'} cursor-pointer relative ${task.completed ? 'after:content-[\'\'] after:absolute after:top-1/2 after:left-1/2 after:w-[6px] after:h-[10px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45 after:-translate-x-1/2 after:-translate-y-1/2' : ''}"
+            aria-label="${task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}"
+            aria-pressed="${task.completed}"
+          ></button>
         </form>
         <p class="flex-1 text-base px-[10px] ${task.completed ? 'text-[#aaa] line-through' : 'text-[#333]'}">${task.text}</p>
         <form action="/api/deleteTask" method="POST" name="deleteTask">
           <input type="hidden" name="taskId" value="${task.id}" />
-          <button type="submit" value="${task.id}"
-          class="w-5 h-5 bg-transparent border-none cursor-pointer relative opacity-50">X</button>
+          <button 
+            type="submit" 
+            value="${task.id}"
+            class="w-5 h-5 bg-transparent border-none cursor-pointer relative opacity-50"
+            aria-label="Eliminar tarea"
+          >X</button>
         </form>
       `;
       

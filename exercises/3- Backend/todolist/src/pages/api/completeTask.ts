@@ -1,5 +1,6 @@
 import { state } from '../../state';
 import type { APIRoute } from "astro";
+import { validateTaskId, handleResponse, handleError } from '../../utils/apiUtils';
 
 type TaskId = number;
 
@@ -39,18 +40,10 @@ export const POST: APIRoute = async ({ request, redirect }) => {
             // Procesar como form-data o x-www-form-urlencoded
             taskId = await parseFormData(request);
         }
-        
-        console.log("Task ID to complete:", taskId);
-        
-        // Verificar si tenemos un ID válido
-        if (taskId <= 0) {
-            return new Response(JSON.stringify({
-                success: false,
-                error: 'ID de tarea inválido'
-            }), {
-                status: 400,
-                headers: { "Content-Type": "application/json" },
-            });
+        // Validar el ID de la tarea usando la utilidad
+        const validationError = validateTaskId(taskId);
+        if (validationError) {
+            return handleError(contentType, redirect, validationError, 400);
         }
         
         // Buscar la tarea por su ID
@@ -59,31 +52,20 @@ export const POST: APIRoute = async ({ request, redirect }) => {
         if (taskIndex !== -1) {
           // Cambiar el estado de completado
           state.tasks[taskIndex].completed = !state.tasks[taskIndex].completed;
+          const status = state.tasks[taskIndex].completed ? "completada" : "pendiente";
           
-          // Devolver la tarea actualizada
-          return new Response(JSON.stringify({
-            success: true,
-            state: state,
-          }), {
-            headers: { "Content-Type": "application/json" },
-          });
+          // Usar handleResponse para devolver respuesta estandarizada
+          return handleResponse(
+            contentType, 
+            redirect, 
+            { state: state }, 
+            `Tarea marcada como ${status}`
+          );
         } else {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Tarea no encontrada'
-          }), {
-            status: 404,
-            headers: { "Content-Type": "application/json" },
-          });
+          return handleError(contentType, redirect, "Tarea no encontrada", 404);
         }
-      } catch (error) {
+    } catch (error) {
         console.error("Error procesando la solicitud:", error);
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Error interno del servidor'
-        }), {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
+        return handleError(contentType, redirect, "Error interno del servidor", 500);
+    }
 };

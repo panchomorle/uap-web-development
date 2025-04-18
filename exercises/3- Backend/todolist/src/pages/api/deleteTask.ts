@@ -1,11 +1,12 @@
 import { state } from '../../state';
 import type { APIRoute } from "astro";
+import { validateTaskId, handleResponse, handleError } from '../../utils/apiUtils';
 
 type TaskId = number;
 
 const parseFormData = async (request: Request): Promise<TaskId> => {
     const formData = await request.formData();
-    const taskId = Number(formData.get("taskInput"));
+    const taskId = Number(formData.get("taskId"));
     return taskId;
 };
 
@@ -16,7 +17,6 @@ const parseJson = async (request: Request): Promise<TaskId> => {
         return Number(data.taskId);
     } catch (error) {
         console.error("Error parsing JSON:", error);
-        // Devolver un objeto vacío que cumpla con la estructura Actions
         return -1;
     }
 };
@@ -30,34 +30,33 @@ export const GET: APIRoute = async () => {
 export const POST: APIRoute = async ({ request, redirect }) => {
     const contentType = request.headers.get("content-type") || "";
     try {
-        let taskId: TaskId;
-
+        let taskId: number;
+        
+        // Determinar cómo procesar los datos según el Content-Type
         if (contentType.includes("application/json")) {
             taskId = await parseJson(request);
-        } 
-        // Si es un formulario o cualquier otro tipo de contenido
-        else {
-            try {
-                taskId = await parseFormData(request);
-            } catch (formError) {
-                console.error("Error parsing form data:", formError);
-                return new Response("Invalid form data", { status: 400 });
-            }
+        } else {
+            // Procesar como form-data o x-www-form-urlencoded
+            taskId = await parseFormData(request);
         }
-        if (taskId) {
-			state.tasks = state.tasks.filter(task => task.id !== taskId);
+        // Validar el ID de la tarea usando la utilidad
+        const validationError = validateTaskId(taskId);
+        if (validationError) {
+            return handleError(contentType, redirect, validationError, 400);
         }
+        
+        // Verificar si la tarea existe
+        const taskExists = state.tasks.some(task => task.id === taskId);
+        if (!taskExists) {
+            return handleError(contentType, redirect, "La tarea especificada no existe", 404);
+        }
+        
+        // Eliminar la tarea
+        state.tasks = state.tasks.filter(task => task.id !== taskId);
+        return handleResponse(contentType, redirect, { state }, "Tarea eliminada correctamente");
+        
     } catch (error) {
         console.error("Error processing request:", error);
-        return new Response("Error processing request", { status: 500 });
-    }
-    // Determinar tipo de respuesta basado en el tipo de contenido de la solicitud
-    if (contentType.includes("application/json")) {
-        return new Response(JSON.stringify({ state }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-        });
-    } else {
-        return redirect("/");
+        return handleError(contentType, redirect, "Error al procesar la solicitud de eliminación", 500);
     }
 }
