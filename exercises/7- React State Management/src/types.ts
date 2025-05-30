@@ -10,10 +10,18 @@ export type Filter = 'all' | 'done' | 'undone';
   export interface State {
     tasks: Task[];
     filter: Filter;
+    page: number;
+    total: number;
   }
 
 export type NotificationStatus = 'success' | 'error' | 'info';
-  
+export interface Notification {
+  id: string;
+  message: string;
+  type: NotificationStatus;
+  duration?: number; // Duración en ms (opcional)
+}
+
   // Interfaz para las respuestas de la API
   export interface ApiResponse {
     success: boolean;

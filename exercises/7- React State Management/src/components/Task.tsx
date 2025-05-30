@@ -1,27 +1,53 @@
+// Task.tsx
 import React from 'react';
+import { useAtom, useAtomValue } from 'jotai';
+import { editingTaskIdAtom, startEditingAtom, stopEditingAtom } from '../stores/editingStore';
 import type { Task } from '../types';
+import { openModalAtom } from '../stores/modalStore';
 
 type TaskProps = {
     task: Task;
     onToggleComplete: (taskId: number) => void;
     onDeleteTask: (taskId: number) => void;
-}
+  }
 
-// Componente para cada tarea individual
 export const TaskComp = ({ task, onToggleComplete, onDeleteTask }: TaskProps) => {
+  const editingTaskId = useAtomValue(editingTaskIdAtom);
+  const [, startEditing] = useAtom(startEditingAtom);
+  const [, stopEditing] = useAtom(stopEditingAtom);
+  const [, openModal ] = useAtom(openModalAtom);
+  
+  const isThisTaskBeingEdited = editingTaskId === task.id;
+  
   const handleToggleComplete = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     onToggleComplete(task.id);
   };
   
-const handleDelete = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleDelete = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onDeleteTask(task.id);
-};
+    openModal({
+      modalId: 'deleteTask',
+      text: `¿Estás seguro de que quieres eliminar la tarea "${task.text}"?`,
+      onConfirm: () => {onDeleteTask(task.id)}
+    });
+  };
+  
+  const handleStartEdit = () => {
+    if (!task.completed) { // Solo permitir edición si no está completada
+      startEditing(task);
+    }
+  };
+  
+  const handleCancelEdit = () => {
+    stopEditing();
+  };
   
   return (
     <article 
-      className="flex items-center p-[15px] border-b border-[#e0dcd6] last:border-b-0" 
+      className={`flex items-center p-[15px] border-b border-[#e0dcd6] last:border-b-0 ${
+        isThisTaskBeingEdited ? 'bg-blue-50 border-blue-200' : ''
+      }`}
       id={String(task.id)}
       aria-label={`Tarea: ${task.text}`}
     >
@@ -37,24 +63,62 @@ const handleDelete = (e: React.FormEvent<HTMLFormElement>) => {
           }`}
           aria-label={task.completed ? "Marcar como pendiente" : "Marcar como completada"}
           aria-pressed={task.completed}
-        ></button>
+        />
       </form>
       
-      <p className={`flex-1 text-base px-[10px] ${task.completed ? 'text-[#aaa] line-through' : 'text-[#333]'}`}>
-        {task.text}
-      </p>
-      
-      <form onSubmit={handleDelete}>
-        <input type="hidden" name="taskId" value={task.id} />
-        <button 
-          type="submit" 
-          value={task.id}
-          className="w-5 h-5 bg-transparent border-none cursor-pointer relative opacity-50"
-          aria-label="Eliminar tarea"
+      {isThisTaskBeingEdited ? (
+        // Modo edición: mostrar indicador visual
+        <div className="flex-1 px-[10px] flex items-center justify-center">
+          <span className="text-blue-600 font-medium text-sm">
+            Editando tarea
+          </span>
+        </div>
+      ) : (
+        // Modo normal: mostrar texto de la tarea
+        <p 
+          className={`flex-1 text-base px-[10px] rounded ${
+            task.completed ? 'text-[#aaa] line-through' : 'text-[#333]'
+          }`}
+          title={task.completed ? "Tarea completada" : "Tarea pendiente"}
         >
-          X
+          {task.text}
+        </p>
+      )}
+      
+      {!isThisTaskBeingEdited && (
+        <button
+          type="button"
+          onClick={handleStartEdit}
+          disabled={task.completed}
+          className="w-5 h-5 bg-transparent border-none cursor-pointer relative opacity-50 hover:opacity-100 mr-1"
+          aria-label="Editar tarea"
+          title="Editar tarea"
+        >
+          ✎
         </button>
-      </form>
+      )}
+      
+      {!isThisTaskBeingEdited ? (
+        <form onSubmit={handleDelete}>
+          <input type="hidden" name="taskId" value={task.id} />
+          <button 
+            type="submit" 
+            value={task.id}
+            className="w-5 h-5 bg-transparent border-none cursor-pointer relative opacity-50 hover:opacity-100"
+            aria-label="Eliminar tarea"
+            title="Eliminar tarea"
+          >
+            ×
+          </button>
+        </form>
+      ) : (
+        <button
+            onClick={handleCancelEdit}
+            className="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded text-gray-700"
+          >
+            Cancelar
+          </button>
+      )}
     </article>
   );
 };

@@ -32,19 +32,21 @@ export const TaskList = ({ tasks, filter, onToggleComplete, onDeleteTask }: Task
   }
   
   return (
-    <section 
-      className="bg-[#f1ece6] rounded-[20px] mx-5 my-5 shadow-md overflow-hidden"
-      id="todo-list"
-      aria-label="Lista de tareas"
-    >
-      {tasks.map(task => (
-        <TaskComp
-          key={task.id} 
-          task={task as Task} 
-          onToggleComplete={onToggleComplete} 
-          onDeleteTask={onDeleteTask}
-        />
-      ))}
-    </section>
+    <div className="w-full flex flex-col gap-[15px] max-h-80 mx-auto font-sans overflow-hidden">
+      <section 
+        className="bg-[#f1ece6] rounded-[20px] mx-2 my-2 shadow-md overflow-y-scroll"
+        id="todo-list"
+        aria-label="Lista de tareas"
+      >
+        {tasks.map(task => (
+          <TaskComp
+            key={filter+task.id} 
+            task={task as Task} 
+            onToggleComplete={onToggleComplete} 
+            onDeleteTask={onDeleteTask}
+          />
+        ))}
+      </section>
+    </div>
   );
 };
