@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import './App.css'
 
 import { TaskList } from './components/TaskList';
@@ -7,15 +7,16 @@ import FilterNav from './components/FilterNav';
 import { useTasks, useAddTask, useUpdateTask, useDeleteTask, useToggleTask, useChangeFilter, useClearCompletedTasks, useCurrentFilter } from './hooks/useTasks';
 import NotificationsContainer from './components/NotificationsContainer';
 import { useToast } from './hooks/useToast';
-import { usePagination } from './hooks/usePagination';
 import PageNav from './components/PageNav';
 import Modal from './components/Modal';
+import { currentBoardAtom } from './stores/boardStore';
+import { useAtom } from 'jotai';
 
 
 function App() {
   const { filter } = useCurrentFilter();
-  const { currentPage, pageLimit } = usePagination();
-  const { data: state, error: fetchError, isLoading } = useTasks(currentPage, pageLimit); // Cargar todas las tareas inicialmente
+  const [ board ] = useAtom(currentBoardAtom); // Obtener el tablero actual desde el hook de filtro
+  const { data: state, error: fetchError, isLoading } = useTasks(); // Cargar todas las tareas inicialmente
   const { mutate: addTask } = useAddTask(); // Hook para añadir tareas
   const { mutate: updateTask } = useUpdateTask(); // Hook para actualizar tareas
   const { mutate: deleteTask } = useDeleteTask(); // Hook para eliminar tareas
@@ -23,10 +24,16 @@ function App() {
   const { mutate: toggleTaskStatus } = useToggleTask(); // Hook para cambiar el estado de las tareas
   const { mutate: changeFilter } = useChangeFilter(); // Hook para cambiar el filtro de tareas
   const toast = useToast();
-  // Obtener el filtro de la URL al cargar la página
+  
+  // Referencia para rastrear si ya se mostró un error por la misma causa
+  const lastErrorRef = useRef<string | null>(null);
+  
+  // Mostrar error solo una vez por mensaje de error
   useEffect(() => {
-    if(fetchError){
+    if(fetchError && fetchError.message !== lastErrorRef.current) {
+      console.log("Error al traer tareas: ", fetchError);
       toast.error(`❌ Error al traer tareas: ${fetchError.message}`);
+      lastErrorRef.current = fetchError.message;
     }
   }, [fetchError, toast]);
   
@@ -44,8 +51,7 @@ function App() {
       
       <header className="text-center bg-[#f2efe8]">
         <h1 className="text-[42px] font-bold py-[15px]">
-          <span className="text-[#6b6b6b]">ToDo</span>
-          <span className="text-[#e8994a]">List</span>
+          {board || 'Lista de Tareas'}
         </h1>
         
         <FilterNav filter={filter} onFilterChange={changeFilter} />

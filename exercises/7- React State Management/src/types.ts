@@ -32,3 +32,12 @@ export interface Notification {
       [key: string]: any;
     };
   }
+
+  export interface Board {
+    id: string;
+    name: string;
+  }
+
+  export interface FilledBoard extends Board {
+    tasks: Task[];
+  }

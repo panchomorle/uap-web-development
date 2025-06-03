@@ -3,36 +3,57 @@ import { BASE_URL, FILTER_TRANSLATION } from '../constants/constants';
 import type { Filter, State, Task } from '../types';
 import { useToast } from './useToast';
 import { usePagination } from './usePagination';
+import { useAtom } from 'jotai';
+import { currentBoardAtom } from '../stores/boardStore';
 
-const fetchTasksQuery = async (filter: Filter, page: number, limit: number) => {
-    const response = await fetch(`${BASE_URL}/filter?filter=${filter}&page=${page}&limit=${limit}`, {
+const fetchTasksQuery = async ({filter, page, limit, boardId}: {
+  filter: Filter, 
+  page: number, 
+  limit: number, 
+  boardId: string
+}) => {
+    const response = await fetch(`${BASE_URL}/filter?filter=${filter}&page=${page}&limit=${limit}&board=${boardId}`, {
         headers: {
           'X-Requested-With': 'XMLHttpRequest'
         }
       });
     if (!response.ok) {
-    throw new Error('Error al cargar tareas');
+        console.log( 'TIRANDO Error en la respuesta de fetchTasksQuery:', response);
+        throw new Error('Error al cargar tareas');
     }
     const data = await response.json();
-    if (!data.success || !data.data) {
-    throw new Error(data.error || 'Error al cargar tareas');
+        if (!data.success || !data.data) {
+        throw new Error(data.error || 'Error al cargar tareas');
     }
     
     return data.data.state as State;
   };
 
-export const useTasks = (page: number  = 1, limit: number = 5) => {
+export const useTasks = () => {
     const { filter } = useCurrentFilter();
-return useQuery({
-    queryKey: ['tasks', filter, page, limit],
-    queryFn: () => fetchTasksQuery(filter, page, limit),
-    staleTime: 1000 * 60 * 5, // 5 minutos
-    placeholderData: (previousData) => previousData, // Retain previous data during page transitions
-});
+    const { currentPage, pageLimit } = usePagination();
+    
+    const [ boardIdParam ] = useAtom(currentBoardAtom);
+    
+    return useQuery({
+        queryKey: ['tasks', filter, currentPage, pageLimit, boardIdParam],
+        queryFn: () => fetchTasksQuery({
+            filter, 
+            page: currentPage, 
+            limit: pageLimit, 
+            boardId: boardIdParam
+        }),
+        staleTime: 1000 * 60 * 5, // 5 minutos
+        placeholderData: (previousData) => previousData,
+        retry: 1, // No reintentar automáticamente
+        refetchOnWindowFocus: false, // No refrescar al volver a enfocar la ventana
+        refetchOnMount: false, // No refrescar al montar el componente si ya falló
+        refetchOnReconnect: false, // No refrescar al recuperar la conexión
+    });
 };
 
-const createTaskMutation = async (taskText: string) => {
-    const response = await fetch(`${BASE_URL}/addTask`, {
+const createTaskMutation = async (taskText: string, boardId: string) => {
+    const response = await fetch(`${BASE_URL}/addTask?board=${boardId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -54,9 +75,10 @@ export const useAddTask = () => {
     const queryClient = useQueryClient();
     const toast = useToast();
     const { filter } = useCurrentFilter();
+    const [ boardId ]  = useAtom(currentBoardAtom);
     
     return useMutation({
-        mutationFn: async (taskText: string) => createTaskMutation(taskText),
+        mutationFn: async (taskText: string) => createTaskMutation(taskText, boardId),
         onSuccess: (data) => {
             // Actualizar todas las vistas de filtros
             queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -86,10 +108,11 @@ export const useToggleTask = () => {
     const queryClient = useQueryClient();
     const toast = useToast();
     const { filter } = useCurrentFilter();
+    const [ boardId ]  = useAtom(currentBoardAtom);
     
     return useMutation({
-        mutationFn: async ({ taskId }: { taskId: Task['id'] }) => {
-            const response = await fetch(`${BASE_URL}/completeTask`, {
+        mutationFn: async ({ taskId }: { taskId: Task['id']}) => {
+            const response = await fetch(`${BASE_URL}/completeTask?board=${boardId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -145,10 +168,11 @@ export const useUpdateTask = () => {
     const queryClient = useQueryClient();
     const toast = useToast();
     const { filter } = useCurrentFilter();
+    const [ boardId ]  = useAtom(currentBoardAtom);
     
     return useMutation({
         mutationFn: async ({ taskId, newText }: { taskId: Task['id']; newText: string }) => {
-            const response = await fetch(`${BASE_URL}/updateTask`, {
+            const response = await fetch(`${BASE_URL}/updateTask?board=${boardId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -187,10 +211,11 @@ export const useDeleteTask = () => {
     const queryClient = useQueryClient();
     const toast = useToast();
     const { filter } = useCurrentFilter();
+    const [ boardId ]  = useAtom(currentBoardAtom);
     
     return useMutation({
         mutationFn: async (taskId: Task['id']) => {
-            const response = await fetch(`${BASE_URL}/deleteTask`, {
+            const response = await fetch(`${BASE_URL}/deleteTask?board=${boardId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -226,9 +251,11 @@ export const useDeleteTask = () => {
 export const useClearCompletedTasks = () => {
     const queryClient = useQueryClient();
     const toast = useToast();
+    const [ boardId ]  = useAtom(currentBoardAtom);
+
     return useMutation({
         mutationFn: async () => {
-            const response = await fetch(`${BASE_URL}/clearCompleted`, {
+            const response = await fetch(`${BASE_URL}/clearCompleted?board=${boardId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
