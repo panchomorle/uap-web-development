@@ -1,11 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BASE_URL } from '../constants/constants';
-import type { Board, State } from '../types';
+import type { Board } from '../types';
 import { useToast } from './useToast';
 import { usePagination } from './usePagination';
-import { useAtom } from 'jotai';
-import { currentBoardAtom } from '../stores/boardStore';
-import { useCurrentFilter } from './useTasks';
+import { useFilter } from './useFilter';
 
 const fetchBoardsQuery = async () => {
     const response = await fetch(`${BASE_URL}/getBoards`, {
@@ -26,12 +24,8 @@ const fetchBoardsQuery = async () => {
 };
 
 export const useBoards = () => {
-    const { filter } = useCurrentFilter();
+    const { filter } = useFilter();
     const { currentPage, pageLimit } = usePagination();
-    
-    // Asegurar que boardId sea siempre string y no se convierta automáticamente
-    const [ boardIdParam ] = useAtom(currentBoardAtom);
-    console.log(boardIdParam, 'Board ID en useBoards');
     
     return useQuery({
         queryKey: ['boards', filter, currentPage, pageLimit],

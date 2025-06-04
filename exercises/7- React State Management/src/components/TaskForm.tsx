@@ -2,13 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAtom, useAtomValue } from 'jotai';
 import { editingTaskAtom, stopEditingAtom, isEditingAtom } from '../stores/editingStore';
+import { useAddTask, useUpdateTask } from '../hooks/useTasks';
+import Spinner from './Spinner';
 
-type TaskFormProps = {
-  onAddTask: (task: string) => void;
-  onUpdateTask: (taskId: number, newText: string) => void;
-}
-
-const TaskForm: React.FC<TaskFormProps> = ({ onAddTask, onUpdateTask }) => {
+const TaskForm: React.FC = () => {
+  const { mutate: addTask, isPending: isAddingTask } = useAddTask(); // Hook para añadir tareas
+  const { mutate: updateTask, isPending: isUpdatingTask } = useUpdateTask(); // Hook para actualizar tareas
   const [taskInput, setTaskInput] = useState('');
   const [editingTask] = useAtom(editingTaskAtom);
   const [, stopEditing] = useAtom(stopEditingAtom);
@@ -22,6 +21,8 @@ const TaskForm: React.FC<TaskFormProps> = ({ onAddTask, onUpdateTask }) => {
       setTaskInput('');
     }
   }, [editingTask]);
+  
+  const isLoading = isAddingTask || isUpdatingTask;
   
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -39,11 +40,11 @@ const TaskForm: React.FC<TaskFormProps> = ({ onAddTask, onUpdateTask }) => {
     
     if (isEditing && editingTask) {
       // Modo edición: actualizar tarea existente
-      onUpdateTask(editingTask.id, trimmedInput);
+      updateTask({taskId: editingTask.id, newText: trimmedInput});
       stopEditing();
     } else {
       // Modo normal: agregar nueva tarea
-      onAddTask(trimmedInput);
+      addTask(trimmedInput);
     }
     
     // Limpiar el input
@@ -79,11 +80,19 @@ const TaskForm: React.FC<TaskFormProps> = ({ onAddTask, onUpdateTask }) => {
         />
         <button 
           type="submit" 
+          disabled={isLoading}
           className={`py-[15px] px-[30px] text-white border-none font-bold cursor-pointer ${
             isEditing ? 'bg-blue-600 hover:bg-blue-700' : 'bg-[#7ab4c6] hover:bg-[#6aa3b5]'
-          }`}
+          } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
-          {isEditing ? 'ACTUALIZAR' : 'AGREGAR'}
+          {isLoading ? (
+            <span className="flex items-center justify-center">
+              <Spinner width={16} height={16} className="fill-white mr-2" />
+              {isEditing ? 'Actualizando...' : 'Agregando...'}
+            </span>
+          ) : (
+            isEditing ? 'ACTUALIZAR' : 'AGREGAR'
+          )}
         </button>
         
         {/* Botón de cancelar solo en modo edición */}
@@ -91,7 +100,8 @@ const TaskForm: React.FC<TaskFormProps> = ({ onAddTask, onUpdateTask }) => {
           <button 
             type="button"
             onClick={handleCancel}
-            className="py-[15px] px-[20px] bg-gray-500 hover:bg-gray-600 text-white border-none font-bold cursor-pointer"
+            disabled={isLoading}
+            className="py-[15px] px-[20px] bg-gray-500 hover:bg-gray-600 text-white border-none font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             CANCELAR
           </button>

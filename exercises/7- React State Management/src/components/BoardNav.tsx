@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from '@tanstack/react-router';
 import { useBoards, useAddBoard } from '../hooks/useBoards';
+import Spinner from './Spinner';
 
 function BoardNav() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -41,13 +42,13 @@ function BoardNav() {
     if (isLoading) {
         return (
             <div className="w-full flex justify-center items-center h-16">
-                <div className="w-6 h-6 border-t-2 border-e-2 border-blue-500 rounded-full animate-spin"></div>
+                <Spinner width={24} height={24} className="fill-blue-500" />
             </div>
         );
     }
 
     return (
-        <header className="bg-gradient-to-r from-amber-600 to-amber-200 text-white shadow-md">
+        <header className="bg-gradient-to-r from-amber-300 to-gray-200 text-white shadow-md">
             <div className="container mx-auto px-4 py-3">
                 <div className="flex items-center justify-between">
                     {/* Botón del menú hamburguesa */}
@@ -78,7 +79,7 @@ function BoardNav() {
             {/* Menú lateral (Sidebar) */}
             <div 
                 id="sidebar-menu"
-                className={`fixed inset-y-0 left-0 z-50 w-64 bg-gray-800 transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out shadow-lg`}
+                className={`fixed inset-y-0 left-0 z-50 w-96 bg-gray-800 transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out shadow-lg`}
             >
                 <div className="p-5">
                     <div className="flex justify-between items-center mb-6">
@@ -114,13 +115,13 @@ function BoardNav() {
                         {/* Formulario para añadir un nuevo tablero */}
                         <div className="mt-6 border-t border-gray-700 pt-4">
                             <h3 className="text-lg font-medium text-white mb-2">Añadir tablero</h3>
-                            <div className="flex space-x-2">
+                            <div className="flex flex-auto space-x-2">
                                 <input
                                     type="text"
                                     value={newBoardName}
                                     onChange={(e) => setNewBoardName(e.target.value)}
                                     placeholder="Nombre del tablero"
-                                    className="flex-1 px-3 py-2 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                                 <button
                                     onClick={() => {
@@ -132,16 +133,30 @@ function BoardNav() {
                                     disabled={isAddingBoard || !newBoardName.trim()}
                                     className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    {isAddingBoard ? (
-                                        <span className="flex items-center justify-center">
-                                            <span className="w-4 h-4 border-t-2 border-e-2 border-white rounded-full animate-spin mr-2"></span>
-                                            <span>Añadiendo...</span>
-                                        </span>
-                                    ) : (
-                                        "Añadir"
-                                    )}
+                                {isAddingBoard ? (
+                                    <span className="flex items-center justify-center">
+                                        <Spinner width={16} height={16} className='fill-white'/>
+                                    </span>
+                                ) : (
+                                    <span>Añadir</span>
+                                )}
                                 </button>
                             </div>
+                        </div>
+                        
+                        {/* Enlace a la página de configuraciones */}
+                        <div className="mt-6 border-t border-gray-700 pt-4">
+                            <Link 
+                                to="/settings"
+                                className="flex items-center text-gray-300 hover:text-white hover:bg-gray-700 px-4 py-2 rounded-md transition duration-200"
+                                onClick={handleLinkClick}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                Configuraciones
+                            </Link>
                         </div>
                     </div>
                 </div>

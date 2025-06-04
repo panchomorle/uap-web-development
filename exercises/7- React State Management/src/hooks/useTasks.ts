@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BASE_URL, FILTER_TRANSLATION } from '../constants/constants';
+import { BASE_URL } from '../constants/constants';
 import type { Filter, State, Task } from '../types';
 import { useToast } from './useToast';
 import { usePagination } from './usePagination';
 import { useAtom } from 'jotai';
 import { currentBoardAtom } from '../stores/boardStore';
+import { taskRefetchIntervalAtom } from '../stores/settingsStore';
+import { useFilter } from './useFilter';
 
 const fetchTasksQuery = async ({filter, page, limit, boardId}: {
   filter: Filter, 
@@ -30,10 +32,12 @@ const fetchTasksQuery = async ({filter, page, limit, boardId}: {
   };
 
 export const useTasks = () => {
-    const { filter } = useCurrentFilter();
+    const { filter } = useFilter();
+    console.log('TIRANDO useTasks con filtro:', filter);
     const { currentPage, pageLimit } = usePagination();
     
-    const [ boardIdParam ] = useAtom(currentBoardAtom);
+    const [boardIdParam] = useAtom(currentBoardAtom);
+    const [refetchInterval] = useAtom(taskRefetchIntervalAtom);
     
     return useQuery({
         queryKey: ['tasks', filter, currentPage, pageLimit, boardIdParam],
@@ -44,11 +48,13 @@ export const useTasks = () => {
             boardId: boardIdParam
         }),
         staleTime: 1000 * 60 * 5, // 5 minutos
+        refetchInterval: refetchInterval * 1000, // Convertir segundos a milisegundos
         placeholderData: (previousData) => previousData,
         retry: 1, // No reintentar automáticamente
         refetchOnWindowFocus: false, // No refrescar al volver a enfocar la ventana
-        refetchOnMount: false, // No refrescar al montar el componente si ya falló
+        refetchOnMount: false, // Usar la caché en mount si existe
         refetchOnReconnect: false, // No refrescar al recuperar la conexión
+        enabled: true, // Siempre activado
     });
 };
 
@@ -74,7 +80,7 @@ const createTaskMutation = async (taskText: string, boardId: string) => {
 export const useAddTask = () => {
     const queryClient = useQueryClient();
     const toast = useToast();
-    const { filter } = useCurrentFilter();
+    const { filter } = useFilter();
     const [ boardId ]  = useAtom(currentBoardAtom);
     
     return useMutation({
@@ -107,7 +113,7 @@ export const useAddTask = () => {
 export const useToggleTask = () => {
     const queryClient = useQueryClient();
     const toast = useToast();
-    const { filter } = useCurrentFilter();
+    const { filter } = useFilter();
     const [ boardId ]  = useAtom(currentBoardAtom);
     
     return useMutation({
@@ -167,7 +173,7 @@ export const useToggleTask = () => {
 export const useUpdateTask = () => {
     const queryClient = useQueryClient();
     const toast = useToast();
-    const { filter } = useCurrentFilter();
+    const { filter } = useFilter();
     const [ boardId ]  = useAtom(currentBoardAtom);
     
     return useMutation({
@@ -210,7 +216,7 @@ export const useUpdateTask = () => {
 export const useDeleteTask = () => {
     const queryClient = useQueryClient();
     const toast = useToast();
-    const { filter } = useCurrentFilter();
+    const { filter } = useFilter();
     const [ boardId ]  = useAtom(currentBoardAtom);
     
     return useMutation({
@@ -282,31 +288,3 @@ export const useClearCompletedTasks = () => {
         }
     });
 };
-
-// Para el cambio de filtro, simplifica y no hagas petición al servidor
-export const useChangeFilter = () => {
-    const queryClient = useQueryClient();
-    const toast = useToast();
-    const { goToPage } = usePagination();
-
-    return useMutation({
-        mutationFn: async (newFilter: Filter) => {
-            // Solo cambiar el filtro localmente, no necesitas ir al servidor
-            return newFilter;
-        },
-        onSuccess: (newFilter) => {
-            // Guardar el filtro actual
-            goToPage(1); // Reiniciar a la primera página al cambiar el filtro
-            queryClient.setQueryData(['currentFilter'], newFilter);
-            toast.success(`✅ Filtro cambiado a "${FILTER_TRANSLATION[newFilter]}"`);
-        },
-        onError: (error) => {
-            toast.error(`❌ Error al cambiar filtro: ${error.message}`);
-        }
-    });
-}
-
-export const useCurrentFilter = () => {
-    const queryClient = useQueryClient();
-    return { filter: queryClient.getQueryData(['currentFilter']) as Filter || 'all' };
-  };

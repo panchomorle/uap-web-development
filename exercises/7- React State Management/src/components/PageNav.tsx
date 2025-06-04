@@ -1,6 +1,7 @@
 import React from 'react';
 import { usePagination } from '../hooks/usePagination';
 import { useTasks } from '../hooks/useTasks';
+import Spinner from './Spinner';
 
 // Subcomponente para botones de navegación
 const PageButton: React.FC<{
@@ -75,9 +76,23 @@ const PageNav: React.FC<PageNavProps> = ({ className = '' }) => {
     goToPage,
     changePageLimit
   } = usePagination();
-  const { data: state } = useTasks(currentPage);
+  const { data: state, isLoading, error } = useTasks();
   const totalTasks = state?.total || 1; // Asegurarse de que totalPages tenga un valor válido
   const totalPages = Math.ceil(totalTasks / pageLimit); 
+
+  // Mostrar spinner mientras carga
+  if (isLoading) {
+    return (
+      <div className={`flex items-center justify-center p-4 ${className}`}>
+        <Spinner width={24} height={24} className="fill-blue-500" />
+      </div>
+    );
+  }
+
+  // Si hay error, no mostrar navegación
+  if (error) {
+    return null;
+  }
 
   // Función para generar números de página con elipsis para muchas páginas
   const renderPageNumbers = () => {

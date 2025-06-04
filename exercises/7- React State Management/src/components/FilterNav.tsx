@@ -1,13 +1,10 @@
 import React from 'react';
 import type { Filter } from '../types';
+import { useFilter } from '../hooks/useFilter';
 
 
-type FilterNavProps = {
-    filter: Filter;
-    onFilterChange: (filter: Filter) => void;
-}
-
-const FilterNav = ({ filter, onFilterChange }: FilterNavProps) => {
+const FilterNav = () => {
+  const { filter, changeFilter } = useFilter();
   // Función para aplicar clases condicionales a los filtros
   const getFilterClass = (filterName: Filter) => {
     const baseClass = "flex-1 py-[15px] bg-transparent no-underline border-none text-lg text-[#999] cursor-pointer relative text-center hover:text-[#333]";
@@ -18,7 +15,7 @@ const FilterNav = ({ filter, onFilterChange }: FilterNavProps) => {
   
   const handleFilterClick = (e: React.MouseEvent<HTMLAnchorElement>, filterName: Filter) => {
     e.preventDefault();
-    onFilterChange(filterName);
+    changeFilter(filterName);
   };
   
   return (

@@ -4,14 +4,16 @@ import { useAtom, useAtomValue } from 'jotai';
 import { editingTaskIdAtom, startEditingAtom, stopEditingAtom } from '../stores/editingStore';
 import type { Task } from '../types';
 import { openModalAtom } from '../stores/modalStore';
+import { useDeleteTask, useToggleTask } from '../hooks/useTasks';
 
 type TaskProps = {
     task: Task;
-    onToggleComplete: (taskId: number) => void;
-    onDeleteTask: (taskId: number) => void;
+    uppercase?: boolean;
   }
 
-export const TaskComp = ({ task, onToggleComplete, onDeleteTask }: TaskProps) => {
+export const TaskComp = ({ task, uppercase = false }: TaskProps) => {
+  const { mutate: deleteTask } = useDeleteTask(); // Hook para eliminar tareas
+  const { mutate: toggleTaskStatus } = useToggleTask(); // Hook para cambiar el estado de las tareas
   const editingTaskId = useAtomValue(editingTaskIdAtom);
   const [, startEditing] = useAtom(startEditingAtom);
   const [, stopEditing] = useAtom(stopEditingAtom);
@@ -21,7 +23,7 @@ export const TaskComp = ({ task, onToggleComplete, onDeleteTask }: TaskProps) =>
   
   const handleToggleComplete = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onToggleComplete(task.id);
+    toggleTaskStatus({taskId: task.id});
   };
   
   const handleDelete = (e: React.FormEvent<HTMLFormElement>) => {
@@ -29,7 +31,7 @@ export const TaskComp = ({ task, onToggleComplete, onDeleteTask }: TaskProps) =>
     openModal({
       modalId: 'deleteTask',
       text: `¿Estás seguro de que quieres eliminar la tarea "${task.text}"?`,
-      onConfirm: () => {onDeleteTask(task.id)}
+      onConfirm: () => {deleteTask(task.id)}
     });
   };
   
@@ -81,7 +83,7 @@ export const TaskComp = ({ task, onToggleComplete, onDeleteTask }: TaskProps) =>
           }`}
           title={task.completed ? "Tarea completada" : "Tarea pendiente"}
         >
-          {task.text}
+          {uppercase ? task.text.toUpperCase() : task.text}
         </p>
       )}
       

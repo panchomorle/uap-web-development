@@ -1,17 +1,40 @@
-import React from 'react';
+import { useEffect, useRef } from 'react';
 import type { Task } from '../types';
 import { TaskComp } from './Task';
+import { useAtom } from 'jotai';
+import { taskDescriptionUppercaseAtom } from '../stores/settingsStore';
+import { useTasks } from '../hooks/useTasks';
+import { useToast } from '../hooks/useToast';
+import { currentFilterAtom } from '../stores/filterStore';
+import Spinner from './Spinner';
 
-type TaskListProps = {
-  tasks: Task[];
-  filter: string;
-  onToggleComplete: (taskId: number) => void;
-  onDeleteTask: (taskId: number) => void;
-}
+export const TaskList = () => {
+  const [filter] = useAtom(currentFilterAtom);
+  const { data: state, error: fetchError, isLoading } = useTasks(); // Cargar todas las tareas inicialmente
+  const [descriptionUppercase] = useAtom(taskDescriptionUppercaseAtom);
+  const toast = useToast();
+  // Referencia para rastrear si ya se mostró un error por la misma causa
+  const lastErrorRef = useRef<string | null>(null);
 
-export const TaskList = ({ tasks, filter, onToggleComplete, onDeleteTask }: TaskListProps) => {
+  // Mostrar error solo una vez por mensaje de error
+  useEffect(() => {
+    if(fetchError && fetchError.message !== lastErrorRef.current) {
+      console.log("Error al traer tareas: ", fetchError);
+      toast.error(`❌ Error al traer tareas: ${fetchError.message}`);
+      lastErrorRef.current = fetchError.message;
+    }
+  }, [fetchError, toast]);
+  
+  if (isLoading) {
+    return (
+      <div className="w-full flex justify-center items-center h-screen">
+        <Spinner width={48} height={48} className="fill-blue-500" />
+      </div>
+    );
+  }
+  
   // Si no hay tareas que mostrar según el filtro actual
-  if (tasks.length === 0) {
+  if (state?.tasks.length === 0) {
     let emptyMessage = 'No hay tareas';
     
     if (filter === 'done') {
@@ -38,12 +61,11 @@ export const TaskList = ({ tasks, filter, onToggleComplete, onDeleteTask }: Task
         id="todo-list"
         aria-label="Lista de tareas"
       >
-        {tasks.map(task => (
+        {state?.tasks.map(task => (
           <TaskComp
             key={filter+task.id} 
-            task={task as Task} 
-            onToggleComplete={onToggleComplete} 
-            onDeleteTask={onDeleteTask}
+            task={task as Task}
+            uppercase={descriptionUppercase}
           />
         ))}
       </section>
