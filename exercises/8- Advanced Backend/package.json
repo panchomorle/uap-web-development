@@ -1,0 +1,41 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "api for todolist",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node src/dist/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "cleanup": "tsx src/db/cleanup.ts",
+    "migrate": "tsx src/db/migrate.ts",
+    "migrate:up": "tsx src/db/migrate.ts up",
+    "migrate:rollback": "tsx src/db/migrate.ts rollback",
+    "migrate:status": "tsx src/db/migrate.ts status",
+    "migrate:reset": "tsx src/db/migrate.ts reset"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.9",
+    "@types/cors": "^2.8.18",
+    "@types/express": "^5.0.2",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/uuid": "^10.0.0",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "sqlite3": "^5.1.7",
+    "uuid": "^11.1.0"
+  }
+}

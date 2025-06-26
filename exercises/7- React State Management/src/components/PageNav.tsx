@@ -77,7 +77,8 @@ const PageNav: React.FC<PageNavProps> = ({ className = '' }) => {
     changePageLimit
   } = usePagination();
   const { data: state, isLoading, error } = useTasks();
-  const totalTasks = state?.total || 1; // Asegurarse de que totalPages tenga un valor válido
+  const totalTasks = state?.total || 1; // Asegu
+  // rarse de que totalPages tenga un valor válido
   const totalPages = Math.ceil(totalTasks / pageLimit); 
 
   // Mostrar spinner mientras carga
@@ -162,7 +163,7 @@ const PageNav: React.FC<PageNavProps> = ({ className = '' }) => {
   };
 
   return (
-    <div className={`flex flex-wrap items-center justify-center p-4 ${className}`}>
+    <div className={`flex flex-wrap gap-1 items-center justify-center p-4 ${className}`}>
       <div className="flex items-center">
         <PageButton 
           onClick={goToPreviousPage} 

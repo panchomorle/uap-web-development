@@ -1,17 +1,21 @@
 // Interfaz para las tareas
 export interface Task {
     id: number;
-    text: string;
+    description: string;
     completed: boolean;
+    created_at: string; // Fecha de creación en formato ISO
+    updated_at: string; // Fecha de actualización en formato ISO
   }
   
 export type Filter = 'all' | 'done' | 'undone';
+
+export type Role = 'owner' | 'editor' | 'viewer';
   // Interfaz para el estado de la aplicación
   export interface State {
     tasks: Task[];
-    filter: Filter;
     page: number;
     total: number;
+    role: Role;
   }
 
 export type NotificationStatus = 'success' | 'error' | 'info';
@@ -36,6 +40,18 @@ export interface Notification {
   export interface Board {
     id: string;
     name: string;
+    role: Role;
+  }
+
+  export interface User{
+    id: string;
+    name: string;
+    email: string;
+  }
+
+  // Tipo que representa un usuario con su rol en un tablero específico
+  export interface UserWithPermission extends User {
+    role: Role;
   }
 
   export interface FilledBoard extends Board {

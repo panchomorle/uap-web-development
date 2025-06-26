@@ -1,0 +1,40 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Start Backend Dev Server",
+        "type": "shell",
+        "command": "npm run dev",
+        "options": {
+          "cwd": "C:\\Users\\eljua\\Documents\\dev\\progra3\\uap-web-development\\exercises\\8- Advanced Backend"
+        },
+        "problemMatcher": [],
+        "presentation": {
+          "panel": "new",
+          "reveal": "always"
+        }
+      },
+      {
+        "label": "Start React Dev Server",
+        "type": "shell",
+        "command": "npm run dev",
+        "options": {
+          "cwd": "C:\\Users\\eljua\\Documents\\dev\\progra3\\uap-web-development\\exercises\\7- React State Management"
+        },
+        "problemMatcher": [],
+        "presentation": {
+          "panel": "new",
+          "reveal": "always"
+        }
+      },
+      {
+        "label": "Start Both Servers",
+        "dependsOn": [
+          "Start Backend Dev Server",
+          "Start React Dev Server"
+        ],
+        "dependsOrder": "parallel"
+      }
+    ]
+  }
+  

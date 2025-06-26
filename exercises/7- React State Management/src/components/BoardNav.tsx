@@ -1,17 +1,24 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from '@tanstack/react-router';
-import { useBoards, useAddBoard } from '../hooks/useBoards';
+import { useBoards, useAddBoard, useDeleteBoard } from '../hooks/useBoards';
 import Spinner from './Spinner';
+import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
 
 function BoardNav() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [newBoardName, setNewBoardName] = useState('');
     const { data: boards, error: fetchError, isLoading } = useBoards();
     const { mutate: addBoard, isPending: isAddingBoard } = useAddBoard();
+    const { mutate: deleteBoard } = useDeleteBoard();
+    const { isAuthenticated, user, logout } = useAuth();
+    const profileMenuRef = useRef<HTMLDivElement>(null);
+    const toast = useToast();
     
     useEffect(() => {
         if (fetchError) {
-            console.error("Error fetching boards:", fetchError);
+            toast.error(`❌ ${fetchError.message}`);
         }
     }, [fetchError]);
 
@@ -19,6 +26,11 @@ function BoardNav() {
     const handleLinkClick = () => {
         setIsMenuOpen(false);
     };
+
+    const handleDeleteBoard = (boardId: string) => {
+        deleteBoard(boardId);
+    }
+
     
     // Controlar el cierre del menú al hacer clic fuera de él
     useEffect(() => {
@@ -38,41 +50,109 @@ function BoardNav() {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [isMenuOpen]);
-    
-    if (isLoading) {
-        return (
-            <div className="w-full flex justify-center items-center h-16">
-                <Spinner width={24} height={24} className="fill-blue-500" />
-            </div>
-        );
-    }
+
+    // Controlar el cierre del menú de perfil al hacer clic fuera de él
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+                setIsProfileMenuOpen(false);
+            }
+        };
+
+        if (isProfileMenuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isProfileMenuOpen]);
 
     return (
         <header className="bg-gradient-to-r from-amber-300 to-gray-200 text-white shadow-md">
             <div className="container mx-auto px-4 py-3">
                 <div className="flex items-center justify-between">
                     {/* Botón del menú hamburguesa */}
-                    <button 
-                        id="menu-button"
-                        className="p-2 rounded-md hover:bg-blue-700 transition duration-200 focus:outline-none"
-                        onClick={() => setIsMenuOpen(!isMenuOpen)}
-                        aria-label="Menú principal"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                    </button>
+                        { isLoading ?
+                            (
+                                <div className="w-full flex justify-center items-center">
+                                    <Spinner width={24} height={24} className="fill-blue-500" />
+                                </div>
+                            )
+                        :
+                         isAuthenticated && (
+                            <button 
+                            id="menu-button"
+                            className="p-2 rounded-md hover:bg-blue-700 transition duration-200 focus:outline-none"
+                            onClick={() => setIsMenuOpen(!isMenuOpen)}
+                            aria-label="Menú principal"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
+                            </button>
+                         )
+                    }
+
                     
                     {/* Título del sitio */}
+                    <Link
+                        to="/"
+                        className="flex items-center text-gray-800 hover:text-blue-600 transition duration-200"
+                        onClick={handleLinkClick}
+                    >
                     <div className="flex items-center">
                         <h1 className="text-xl font-bold">
                             <span className="text-[#6b6b6b]">ToDo</span>
                             <span className="text-[#e8994a]">List</span>
                         </h1>
                     </div>
-                    
+                    </Link>
+          
                     {/* Espacio para posibles botones adicionales a la derecha */}
-                    <div className="w-6"></div>
+                    <div className="flex items-center">
+                        {isAuthenticated ? (
+                            /* Profile Menu */
+                            <div className="relative" ref={profileMenuRef}>
+                                <button
+                                    onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                                    className="p-2 rounded-full hover:bg-gray-200 transition duration-200 focus:outline-none"
+                                    aria-label="Profile menu"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                </button>
+
+                                {/* Profile Dropdown Menu */}
+                                {isProfileMenuOpen && (
+                                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                                        <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-200">
+                                            <div className="font-medium">Signed in as</div>
+                                            <div className="truncate text-gray-600">{user?.email}</div>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                logout();
+                                                setIsProfileMenuOpen(false);
+                                            }}
+                                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-200"
+                                        >
+                                            Sign out
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            /* Login Button */
+                            <Link
+                                to="/login"
+                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200 text-sm font-medium"
+                            >
+                                Login
+                            </Link>
+                        )}
+                    </div>
                 </div>
             </div>
             
@@ -98,15 +178,21 @@ function BoardNav() {
                     <div className="space-y-3">
                         {boards && boards?.length > 0 ? (
                             boards.map((board) => (
-                                <Link 
-                                    key={board.id} 
-                                    to="/board/$boardId"
-                                    params={{ boardId: board.id }}
-                                    className="block py-2 px-4 rounded text-gray-200 hover:bg-blue-700 hover:text-white transition duration-200 [&.active]:bg-blue-600 [&.active]:font-bold"
-                                    onClick={handleLinkClick}
-                                >
-                                    {board.name}
-                                </Link>
+                                <div key={board.id} className="flex items-center justify-between">
+                                    <Link 
+                                        to="/board/$boardId"
+                                        params={{ boardId: board.id }}
+                                        className="w-full block py-2 px-4 rounded text-gray-200 hover:bg-blue-700 hover:text-white transition duration-200 [&.active]:bg-blue-600 [&.active]:font-bold"
+                                        onClick={handleLinkClick}
+                                    >
+                                        {board.name}
+                                    </Link>
+                                    <button 
+                                        onClick={() => handleDeleteBoard(board.id)}
+                                        className="ml-2 text-gray-500 hover:text-gray-200"
+                                        aria-label={`Eliminar tablero ${board.name}`}
+                                    >X</button>
+                                </div>
                             ))
                         ) : (
                             <p className="text-gray-400">No hay tableros disponibles</p>

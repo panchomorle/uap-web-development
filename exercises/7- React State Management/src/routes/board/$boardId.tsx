@@ -19,7 +19,6 @@ function BoardComponent() {
   // y solo cuando sea diferente al valor actual del átomo
   useEffect(() => {
     if (boardIdString !== boardIdFromAtom) {
-      console.log('Actualizando Board ID en átomo:', boardIdString);
       setCurrentBoard(boardIdString);
     }
   }, [boardIdString, setCurrentBoard]);

@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useBoards } from '../hooks/useBoards'
+import { useAuth } from '../hooks/useAuth';
 
 export const Route = createFileRoute('/')({
   component: Index,
@@ -8,6 +9,7 @@ export const Route = createFileRoute('/')({
 function Index() {
   const { data: boards, isLoading } = useBoards();
   const firstBoardId = boards && boards.length > 0 ? boards[0].id : null;
+  const { isAuthenticated } = useAuth();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#f2efe8] to-white">
@@ -56,11 +58,11 @@ function Index() {
                 <div className="w-8 h-8 border-t-2 border-e-2 border-[#e8994a] rounded-full animate-spin"></div>
               ) : (
                 <Link
-                  to={firstBoardId ? `/board/$boardId` : '/'}
+                  to={!isAuthenticated ? "/login" : firstBoardId ? `/board/$boardId` : '/'}
                   params={firstBoardId ? { boardId: firstBoardId } : {}}
                   className="bg-[#e8994a] text-white py-3 px-8 rounded-lg font-medium hover:bg-[#d78a45] transition duration-300 inline-block"
                 >
-                  {firstBoardId ? 'Ir a Mi Tablero' : 'Crear Tablero'}
+                  {!isAuthenticated ? "Ingresar" : firstBoardId ? 'Ir a Mi Tablero' : 'Crear Tablero'}
                 </Link>
               )}
             </div>

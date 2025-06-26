@@ -30,15 +30,13 @@ export const TaskComp = ({ task, uppercase = false }: TaskProps) => {
     e.preventDefault();
     openModal({
       modalId: 'deleteTask',
-      text: `¿Estás seguro de que quieres eliminar la tarea "${task.text}"?`,
+      text: `¿Estás seguro de que quieres eliminar la tarea "${task.description}"?`,
       onConfirm: () => {deleteTask(task.id)}
     });
   };
   
   const handleStartEdit = () => {
-    if (!task.completed) { // Solo permitir edición si no está completada
       startEditing(task);
-    }
   };
   
   const handleCancelEdit = () => {
@@ -51,7 +49,7 @@ export const TaskComp = ({ task, uppercase = false }: TaskProps) => {
         isThisTaskBeingEdited ? 'bg-blue-50 border-blue-200' : ''
       }`}
       id={String(task.id)}
-      aria-label={`Tarea: ${task.text}`}
+      aria-label={`Tarea: ${task.description}`}
     >
       <form onSubmit={handleToggleComplete}>
         <input type="hidden" name="taskId" value={task.id} />
@@ -83,7 +81,7 @@ export const TaskComp = ({ task, uppercase = false }: TaskProps) => {
           }`}
           title={task.completed ? "Tarea completada" : "Tarea pendiente"}
         >
-          {uppercase ? task.text.toUpperCase() : task.text}
+          {uppercase ? task.description.toUpperCase() : task.description}
         </p>
       )}
       
@@ -91,7 +89,6 @@ export const TaskComp = ({ task, uppercase = false }: TaskProps) => {
         <button
           type="button"
           onClick={handleStartEdit}
-          disabled={task.completed}
           className="w-5 h-5 bg-transparent border-none cursor-pointer relative opacity-50 hover:opacity-100 mr-1"
           aria-label="Editar tarea"
           title="Editar tarea"

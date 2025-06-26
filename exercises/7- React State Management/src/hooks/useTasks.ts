@@ -8,32 +8,29 @@ import { currentBoardAtom } from '../stores/boardStore';
 import { taskRefetchIntervalAtom } from '../stores/settingsStore';
 import { useFilter } from './useFilter';
 
-const fetchTasksQuery = async ({filter, page, limit, boardId}: {
+const fetchTasksQuery = async ({boardId, filter, page, limit}: {
+  boardId: string
   filter: Filter, 
   page: number, 
   limit: number, 
-  boardId: string
 }) => {
-    const response = await fetch(`${BASE_URL}/filter?filter=${filter}&page=${page}&limit=${limit}&board=${boardId}`, {
+    const response = await fetch(`${BASE_URL}/tasks?boardId=${boardId}&filter=${filter}&page=${page}&limit=${limit}`,
+    {
+        method: 'GET',
         headers: {
           'X-Requested-With': 'XMLHttpRequest'
-        }
+        },
+        credentials: 'include'
       });
     if (!response.ok) {
-        console.log( 'TIRANDO Error en la respuesta de fetchTasksQuery:', response);
-        throw new Error('Error al cargar tareas');
+        throw new Error(response.statusText + ' - ' + (await response.json()).error || '');
     }
-    const data = await response.json();
-        if (!data.success || !data.data) {
-        throw new Error(data.error || 'Error al cargar tareas');
-    }
-    
-    return data.data.state as State;
+    const state = await response.json();
+    return state as State;
   };
 
 export const useTasks = () => {
     const { filter } = useFilter();
-    console.log('TIRANDO useTasks con filtro:', filter);
     const { currentPage, pageLimit } = usePagination();
     
     const [boardIdParam] = useAtom(currentBoardAtom);
@@ -59,22 +56,20 @@ export const useTasks = () => {
 };
 
 const createTaskMutation = async (taskText: string, boardId: string) => {
-    const response = await fetch(`${BASE_URL}/addTask?board=${boardId}`, {
+    const response = await fetch(`${BASE_URL}/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Requested-With': 'XMLHttpRequest'
         },
-        body: JSON.stringify({ taskInput: taskText })
+        credentials: 'include',
+        body: JSON.stringify({ board_id: boardId, description: taskText })
       });
       const res = await response.json();
       if (!response.ok){
         throw new Error(res.error || 'Error al añadir tarea');
       }
-      if (!res.success || !res.data) {
-        throw new Error(res.error || 'Error al añadir tarea');
-      }
-      return res.data
+      return res.message
     }
 
 export const useAddTask = () => {
@@ -113,56 +108,46 @@ export const useAddTask = () => {
 export const useToggleTask = () => {
     const queryClient = useQueryClient();
     const toast = useToast();
-    const { filter } = useFilter();
-    const [ boardId ]  = useAtom(currentBoardAtom);
+    //const { filter } = useFilter();
     
     return useMutation({
         mutationFn: async ({ taskId }: { taskId: Task['id']}) => {
-            const response = await fetch(`${BASE_URL}/completeTask?board=${boardId}`, {
-                method: 'POST',
+            const response = await fetch(`${BASE_URL}/tasks/${taskId}/complete`, {
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify({ taskId })
+                credentials: 'include'
             });
             if (!response.ok) {
-                throw new Error('Error al completar tarea');
+                const data = await response.json();
+                throw new Error(data.error || 'Error desconocido');
             }
             const data = await response.json();
-            if (!data.success || !data.data) {
-                throw new Error(data.error || 'Error al completar tarea');
-            }
-            return data.data;
+            return { completed: data.completed, message: data.message };
         },
-        onSuccess: (data, { taskId }: { taskId: Task['id'] }) => {
-            // Obtener las tareas actuales antes de la actualización
-            const currentTasks = queryClient.getQueryData(['tasks', filter]) as Task[] || [];
-            const oldTask = currentTasks.find(task => task.id === taskId);
-            
+        onSuccess: (data) => {
             // Invalidar todas las queries de tasks para refrescar todas las vistas
             queryClient.invalidateQueries({ queryKey: ['tasks'] });
             
             // Actualización optimista para la vista actual
-            queryClient.setQueryData(['tasks', filter], (old: Task[] = []) => {
-                // Invertir el estado de completado de la tarea
-                const newCompleted = oldTask ? !oldTask.completed : true;
+            // queryClient.setQueryData(['tasks', filter], (old: Task[] = []) => {
+            //     // Invertir el estado de completado de la tarea
+            //     const newCompleted = oldTask ? !oldTask.completed : true;
                 
-                const updatedTasks = old.map((task) =>
-                    task.id === taskId ? { ...task, ...data, completed: newCompleted } : task
-                );
+            //     const updatedTasks = old.map((task) =>
+            //         task.id === taskId ? { ...task, ...data, completed: newCompleted } : task
+            //     );
                 
-                // Filtrar según la vista actual después de la actualización
-                return updatedTasks.filter(task => {
-                    if (filter === 'done') return task.completed;
-                    if (filter === 'undone') return !task.completed;
-                    return true; // 'all'
-                });
-            });
-            
-            // Determinar si la tarea se completó o desmarcó basado en su estado anterior
-            const newCompleted = oldTask ? !oldTask.completed : true;
-            toast.success(`✅ Tarea ${newCompleted ? 'completada' : 'desmarcada como completada'} correctamente`);
+            //     // Filtrar según la vista actual después de la actualización
+            //     return updatedTasks.filter(task => {
+            //         if (filter === 'done') return task.completed;
+            //         if (filter === 'undone') return !task.completed;
+            //         return true; // 'all'
+            //     });
+            // });
+            toast.success(`✅ Tarea ${data.completed ? 'completada' : 'desmarcada como completada'} correctamente`);
         },
         onError: (error) => {
             toast.error(`❌ Error al cambiar estado de tarea: ${error.message}`);
@@ -174,26 +159,27 @@ export const useUpdateTask = () => {
     const queryClient = useQueryClient();
     const toast = useToast();
     const { filter } = useFilter();
-    const [ boardId ]  = useAtom(currentBoardAtom);
     
     return useMutation({
         mutationFn: async ({ taskId, newText }: { taskId: Task['id']; newText: string }) => {
-            const response = await fetch(`${BASE_URL}/updateTask?board=${boardId}`, {
-                method: 'POST',
+            const response = await fetch(`${BASE_URL}/tasks/${taskId}`, {
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify({ taskId, newText })
+                credentials: 'include',
+                body: JSON.stringify({ description: newText })
             });
             if (!response.ok) {
-                throw new Error('Error al actualizar estado de tarea');
+                const data = await response.json();
+                throw new Error(data.error || 'Error desconocido');
             }
             const data = await response.json();
-            if (!data.success || !data.data) {
-                throw new Error(data.error || 'Error al actualizar estado de tarea');
+            if (data.error) {
+                throw new Error(data.error || 'Error al actualizar tarea');
             }
-            return data.data;
+            return data.message;
         },
         onSuccess: (data, { taskId }) => {
             // Invalidar todas las queries
@@ -217,26 +203,26 @@ export const useDeleteTask = () => {
     const queryClient = useQueryClient();
     const toast = useToast();
     const { filter } = useFilter();
-    const [ boardId ]  = useAtom(currentBoardAtom);
     
     return useMutation({
         mutationFn: async (taskId: Task['id']) => {
-            const response = await fetch(`${BASE_URL}/deleteTask?board=${boardId}`, {
-                method: 'POST',
+            const response = await fetch(`${BASE_URL}/tasks/${taskId}`, {
+                method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify({ taskId })
+                credentials: 'include'
             });
             if (!response.ok) {
-                throw new Error('Error al eliminar tarea');
+                const data = await response.json();
+                throw new Error(data.error || 'Error desconocido');
             }
             const data = await response.json();
-            if (!data.success || !data.data) {
+            if (data.error) {
                 throw new Error(data.error || 'Error al eliminar tarea');
             }
-            return data.data;
+            return data.message;
         },
         onSuccess: (_, taskId) => {
             // Invalidar todas las queries
@@ -261,22 +247,23 @@ export const useClearCompletedTasks = () => {
 
     return useMutation({
         mutationFn: async () => {
-            const response = await fetch(`${BASE_URL}/clearCompleted?board=${boardId}`, {
-                method: 'POST',
+            const response = await fetch(`${BASE_URL}/tasks/completed?boardId=${boardId}`, {
+                method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify({ value: true })
+                credentials: 'include'
             });
             if (!response.ok) {
-                throw new Error('Error al limpiar tareas completadas');
+                const data = await response.json();
+                throw new Error(data.error || 'Error desconocido');
             }
             const data = await response.json();
-            if (!data.success || !data.data) {
+            if (data.error) {
                 throw new Error(data.error || 'Error al limpiar tareas completadas');
             }
-            return data.data;
+            return data.message;
         },
         onSuccess: () => {
             // Invalidar todas las queries para refrescar todas las vistas

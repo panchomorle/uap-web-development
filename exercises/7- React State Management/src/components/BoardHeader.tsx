@@ -2,8 +2,7 @@ import React from 'react';
 import type { Filter } from '../types';
 import { useFilter } from '../hooks/useFilter';
 
-
-const FilterNav = () => {
+const BoardHeader = ({children}: {children?: React.ReactNode}) => {
   const { filter, changeFilter } = useFilter();
   // Función para aplicar clases condicionales a los filtros
   const getFilterClass = (filterName: Filter) => {
@@ -44,15 +43,9 @@ const FilterNav = () => {
       >
         Todas
       </a>
-      <button 
-        className="w-[50px] h-full bg-[#a87979] text-white border-none text-2xl cursor-pointer flex items-center justify-center" 
-        aria-label="Agregar tarea"
-        onClick={() => document.getElementById('todo-input')?.focus()}
-      >
-        +
-      </button>
+      { children }
     </nav>
   );
 };
 
-export default FilterNav;
+export default BoardHeader;

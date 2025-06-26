@@ -2,33 +2,33 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BASE_URL } from '../constants/constants';
 import type { Board } from '../types';
 import { useToast } from './useToast';
-import { usePagination } from './usePagination';
-import { useFilter } from './useFilter';
+import { useAuth } from './useAuth';
+
+const queryKey = ['boards'];
 
 const fetchBoardsQuery = async () => {
-    const response = await fetch(`${BASE_URL}/getBoards`, {
+    const response = await fetch(`${BASE_URL}/boards`, {
+        method: 'GET',
         headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        }
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'include',
       });
     if (!response.ok) {
-        console.log('Error en la respuesta de fetchBoardsQuery:', response);
-        throw new Error('Error al cargar tableros');
+        const errorData = await response.json();
+        throw new Error('Error al cargar tableros: ' + (errorData.error || 'error desconocido'));
     }
     const data = await response.json();
-    if (!data.success || !data.data) {
+    if (!data) {
         throw new Error(data.error || 'Error al cargar tableros');
     }
-    
-    return data.data.boards as Board[];
+    return data.boards as Board[];
 };
 
 export const useBoards = () => {
-    const { filter } = useFilter();
-    const { currentPage, pageLimit } = usePagination();
-    
-    return useQuery({
-        queryKey: ['boards', filter, currentPage, pageLimit],
+    const { user, isAuthenticated } = useAuth();
+    return useQuery<Board[]>({
+        queryKey: [queryKey, user?.id],
         queryFn: () => fetchBoardsQuery(),
         staleTime: 1000 * 60 * 5, // 5 minutos
         placeholderData: (previousData) => previousData,
@@ -36,26 +36,26 @@ export const useBoards = () => {
         refetchOnWindowFocus: false, // No refrescar al volver a enfocar la ventana
         refetchOnMount: false, // No refrescar al montar el componente si ya falló
         refetchOnReconnect: false, // No refrescar al recuperar la conexión
+        enabled: isAuthenticated, // Solo ejecutar si el usuario está autenticado
     });
 };
 
 const createBoardMutation = async (boardName: string) => {
-    const response = await fetch(`${BASE_URL}/addBoard`, {
+    const response = await fetch(`${BASE_URL}/boards`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Requested-With': 'XMLHttpRequest'
         },
-        body: JSON.stringify({ boardName: boardName })
+        credentials: 'include',
+        body: JSON.stringify({ name: boardName })
       });
-      const res = await response.json();
+
       if (!response.ok){
-        throw new Error(res.error || 'Error al añadir tablero');
+        const errorText = await response.text();
+        throw new Error(errorText || 'Error al añadir tablero');
       }
-      if (!res.success || !res.data) {
-        throw new Error(res.error || 'Error al añadir tablero');
-      }
-      return res.data
+      return response;
     }
 
 export const useAddBoard = () => {
@@ -63,10 +63,10 @@ export const useAddBoard = () => {
     const toast = useToast();
     
     return useMutation({
-        mutationFn: async (boardName: string) => createBoardMutation(boardName),
+        mutationFn: createBoardMutation,
         onSuccess: (data) => {
             // Actualizar la lista de tableros
-            queryClient.invalidateQueries({ queryKey: ['boards'] });
+            queryClient.invalidateQueries({ queryKey: [queryKey] });
             
             toast.success('✅ Tablero añadido correctamente');
         },
@@ -75,3 +75,32 @@ export const useAddBoard = () => {
         }
     });
 };
+
+export const useDeleteBoard = () => {
+    const queryClient = useQueryClient();
+    const toast = useToast();
+
+    return useMutation({
+        mutationFn: async (boardId: string) => {
+            const response = await fetch(`${BASE_URL}/boards/${boardId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'include',
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Error al eliminar tablero');
+            }
+        },
+        onSuccess: () => {
+            // Actualizar la lista de tableros
+            queryClient.invalidateQueries({ queryKey: [queryKey] });
+            toast.success('✅ Tablero eliminado correctamente');
+        },
+        onError: (error) => {
+            toast.error(`❌ Error al eliminar tablero: ${error.message}`);
+        }
+    });
+}

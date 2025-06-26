@@ -16,7 +16,7 @@ const TaskForm: React.FC = () => {
   // Efecto para cargar el texto de la tarea cuando se entra en modo edición
   useEffect(() => {
     if (editingTask) {
-      setTaskInput(editingTask.text);
+      setTaskInput(editingTask.description);
     } else {
       setTaskInput('');
     }
