@@ -1,12 +1,12 @@
 import Link from 'next/link';
-
+/* eslint-disable react/no-unescaped-entities */
 export default function NotFound() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Book Not Found</h2>
         <p className="text-gray-600 mb-6">
-          Sorry, we couldn't find the book you're looking for.
+          Sorry, we couldn&apos;t find the book you&apos;re looking for.
         </p>
         <Link 
           href="/"

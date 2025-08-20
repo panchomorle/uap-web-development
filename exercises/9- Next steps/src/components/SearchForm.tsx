@@ -1,5 +1,5 @@
 'use client';
-
+/* eslint-disable react/no-unescaped-entities */
 import { useFormStatus } from 'react-dom';
 import { useState } from 'react';
 

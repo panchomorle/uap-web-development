@@ -1,6 +1,6 @@
 'use server'
 
-import { GoogleBooksResponse, GoogleBook, Review } from './types'
+import { GoogleBooksResponse, GoogleBook } from './types'
 
 export async function searchBooks(query: string): Promise<GoogleBooksResponse> {
   try {

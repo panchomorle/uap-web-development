@@ -1,5 +1,5 @@
 'use client';
-
+/* eslint-disable react/no-unescaped-entities */
 import { useState } from 'react';
 import { searchBooks } from '../lib/actions';
 import { Book } from '../lib/types';

@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { Book, GoogleBooksResponse, Review } from './types';
 import { getReviews, addReview, voteOnReview, getAverageRating } from './database';
 
@@ -63,7 +64,9 @@ export async function createReview(
   content: string, 
   userName: string
 ): Promise<Review> {
-  return addReview(bookId, rating, content, userName);
+  const review = addReview(bookId, rating, content, userName);
+  revalidatePath(`/book/${bookId}`);
+  return review;
 }
 
 export async function voteReview(
@@ -71,7 +74,11 @@ export async function voteReview(
   reviewId: number, 
   voteType: 'up' | 'down'
 ): Promise<boolean> {
-  return voteOnReview(bookId, reviewId, voteType);
+  const success = voteOnReview(bookId, reviewId, voteType);
+  if (success) {
+    revalidatePath(`/book/${bookId}`);
+  }
+  return success;
 }
 
 export async function getBookAverageRating(bookId: string): Promise<number> {
