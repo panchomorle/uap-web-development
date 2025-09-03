@@ -12,7 +12,7 @@ jobs:
       packages: write
     defaults:
       run:
-        working-directory: exercises/9- Next steps
+        working-directory: exercises/9-Nextsteps
     steps:
       - uses: actions/checkout@v4
       - name: Log in to GitHub Container Registry
