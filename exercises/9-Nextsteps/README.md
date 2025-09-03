@@ -1,3 +1,57 @@
+# Plataforma de Descubrimiento y Reseñas de Libros
+
+## Deploy en Producción
+
+La aplicación está deployada en: [URL_DE_TU_APP](https://tu-app.vercel.app)
+
+## Deploy Local
+
+1. Instala dependencias:
+   ```sh
+   npm install
+   ```
+2. Crea un archivo `.env.local` con las variables de entorno necesarias.
+3. Ejecuta en desarrollo:
+   ```sh
+   npm run dev
+   ```
+4. Abre [http://localhost:3000](http://localhost:3000)
+
+## Variables de Entorno
+
+- `NEXT_PUBLIC_API_URL`: URL de la API backend
+- Otras variables necesarias según tu app
+
+## Ejecutar con Docker
+
+1. Construye la imagen:
+   ```sh
+   docker build -t mi-next-app .
+   ```
+2. Ejecuta el contenedor:
+   ```sh
+   docker run -p 3000:3000 mi-next-app
+   ```
+
+## GitHub Actions
+
+- **build.yml**: Hace build en cada Pull Request.
+- **test.yml**: Corre los tests en cada Pull Request.
+- **docker.yml**: Construye y publica la imagen Docker al mergear en main/master.
+
+Los workflows están en `.github/workflows/` y usan cache de dependencias para acelerar los builds.
+
+## Tests
+
+Para correr los tests localmente:
+```sh
+npm test
+```
+
+## Notas
+- Configura las variables de entorno en Vercel y en los secrets de GitHub si es necesario.
+- La imagen Docker se publica en GitHub Container Registry (ghcr.io) automáticamente.
+
 Descripción del Proyecto:
 Construir una plataforma de descubrimiento y reseñas de libros donde los usuarios pueden buscar libros, ver detalles y compartir reseñas con votación comunitaria.
 Características Principales:
