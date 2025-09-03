@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { searchBooks, getBookById } from '@/app/actions'
+import { searchBooks } from '@/app/actions'
 import { addReview, getReviews, voteOnReview, getAverageRating } from '@/lib/database'
 import { validateReviewContent, validateRating, sortReviewsByRelevance } from '@/lib/reviewUtils'
 
@@ -39,7 +39,10 @@ describe('Integration Tests - Complete Review Flow', () => {
       expect(searchResult.items).toHaveLength(1)
       expect(searchResult.items?.[0].volumeInfo.title).toBe('Test Book')
 
-      const bookId = searchResult.items?.[0].id!
+      const bookId = searchResult.items?.[0].id;
+      if (!bookId) {
+        throw new Error('No se encontró el id del libro en los resultados de búsqueda');
+      }
 
       // Step 2: Add multiple reviews
       const review1 = addReview(bookId, 5, 'Excellent book with great characters and plot!', 'Alice')
@@ -76,15 +79,17 @@ describe('Integration Tests - Complete Review Flow', () => {
       const bookId = 'test-book'
 
       // Test invalid rating
-      const ratingErrors = validateRating(6)
-      expect(ratingErrors).toContain('Rating must be between 1 and 5')
+      const ratingResult = validateRating(6)
+      expect(ratingResult.isValid).toBe(false)
+      expect(ratingResult.error).toBe('Rating must be between 1 and 5')
 
       // Test invalid content
-      const contentErrors = validateReviewContent('bad')
-      expect(contentErrors).toContain('Review must be at least 10 characters long')
+      const contentResult = validateReviewContent('bad')
+      expect(contentResult.isValid).toBe(false)
+      expect(contentResult.error).toBe('Review must be at least 10 characters long')
 
       // Don't add review if validation fails
-      if (ratingErrors.length > 0 || contentErrors.length > 0) {
+      if (!ratingResult.isValid || !contentResult.isValid) {
         // In a real app, you wouldn't call addReview here
         const reviewsBefore = getReviews(bookId)
         const reviewsAfter = getReviews(bookId)
@@ -255,8 +260,8 @@ describe('Integration Tests - Complete Review Flow', () => {
 
       maliciousInputs.forEach(input => {
         // Content validation should catch these
-        const contentErrors = validateReviewContent(input)
-        if (contentErrors.length === 0) {
+        const contentResult = validateReviewContent(input)
+        if (contentResult.isValid) {
           // If validation passes, ensure the content is safely stored
           const review = addReview(bookId, 3, input, 'TestUser')
           expect(review.content).toBe(input) // Should be stored as-is for legitimate content
@@ -266,8 +271,8 @@ describe('Integration Tests - Complete Review Flow', () => {
       // Test invalid ratings
       const invalidRatings = [-1, 0, 6, 7, 3.5, NaN, Infinity, -Infinity]
       invalidRatings.forEach(rating => {
-        const errors = validateRating(rating)
-        expect(errors.length).toBeGreaterThan(0)
+        const result = validateRating(rating)
+        expect(result.isValid).toBe(false)
       })
     })
 
@@ -275,12 +280,10 @@ describe('Integration Tests - Complete Review Flow', () => {
       const bookId = 'unicode-test-book'
       
       const unicodeContent = '这是一个很好的书! 📚 Book review with émojis and accénts'
-      const contentErrors = validateReviewContent(unicodeContent)
-      
-      if (contentErrors.length === 0) {
+      const contentResult = validateReviewContent(unicodeContent)
+      if (contentResult.isValid) {
         const review = addReview(bookId, 4, unicodeContent, 'UnicodeUser')
         expect(review.content).toBe(unicodeContent)
-        
         const retrievedReviews = getReviews(bookId)
         expect(retrievedReviews[0].content).toBe(unicodeContent)
       }
