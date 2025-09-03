@@ -5,6 +5,8 @@ import { getBookById, getBookReviews, getBookAverageRating } from '../../../lib/
 import StarRating from '../../../components/StarRating';
 import ReviewForm from '../../../components/ReviewForm';
 import ReviewList from '../../../components/ReviewList';
+import { cookies } from 'next/headers';
+import { getUserFromToken } from '../../../lib/auth';
 
 interface BookPageProps {
   params: Promise<{
@@ -27,21 +29,24 @@ export default async function BookPage({ params }: BookPageProps) {
   const reviews = await getBookReviews(bookId);
   const averageRating = await getBookAverageRating(bookId);
 
+  // Get user from cookie (server-side)
+  const cookieStore = await cookies();
+  const token = cookieStore.get('authToken')?.value;
+  const user = token ? await getUserFromToken(token) : null;
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        {/* Back Navigation */}
+        <div className="mb-6">
           <Link 
             href="/"
-            className="inline-flex items-center text-blue-600 hover:text-blue-800"
+            className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium"
           >
             ← Back to Search
           </Link>
         </div>
-      </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Book Information */}
           <div className="lg:col-span-2">
@@ -155,7 +160,7 @@ export default async function BookPage({ params }: BookPageProps) {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Write a Review
                 </h3>
-                <ReviewForm bookId={bookId} />
+                <ReviewForm bookId={bookId} user={user} />
               </div>
 
               {/* Reviews List */}

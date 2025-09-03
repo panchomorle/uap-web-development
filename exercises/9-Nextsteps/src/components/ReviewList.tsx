@@ -56,7 +56,7 @@ function ReviewItem({ review, bookId }: ReviewItemProps) {
       <div className="flex items-start justify-between mb-2">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium text-gray-900">{review.userName}</span>
+            <span className="font-medium text-gray-900">{review.userId}</span> {/* Show userId or fetch username via API */}
             <StarRating rating={review.rating} size="sm" />
           </div>
           <span className="text-xs text-gray-500">{formatDate(review.date)}</span>
