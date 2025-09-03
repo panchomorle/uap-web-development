@@ -7,7 +7,7 @@ export default function Home() {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            📚 Descubre y Reseña Libros
+            📚 LIBROS FACHERARDOS
           </h1>
           <p className="text-gray-600">
             Busca libros, lee detalles y comparte tus reseñas con la comunidad
