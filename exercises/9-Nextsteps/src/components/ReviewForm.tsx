@@ -6,33 +6,26 @@ import StarRating from './StarRating';
 
 interface ReviewFormProps {
   bookId: string;
+  user: any;
 }
 
-export default function ReviewForm({ bookId }: ReviewFormProps) {
+export default function ReviewForm({ bookId, user }: ReviewFormProps) {
   const [rating, setRating] = useState(0);
   const [content, setContent] = useState('');
-  const [userName, setUserName] = useState('');
   const [isPending, startTransition] = useTransition();
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (rating === 0 || !content.trim() || !userName.trim()) {
+    if (!user || rating === 0 || !content.trim()) {
       return;
     }
-
     startTransition(async () => {
       try {
-        await createReview(bookId, rating, content.trim(), userName.trim());
-        
-        // Reset form
+        await createReview(bookId, rating, content.trim(), user.id);
         setRating(0);
         setContent('');
-        setUserName('');
         setIsSubmitted(true);
-        
-        // Reset success message after 3 seconds
         setTimeout(() => setIsSubmitted(false), 3000);
       } catch (error) {
         console.error('Error submitting review:', error);
@@ -54,6 +47,14 @@ export default function ReviewForm({ bookId }: ReviewFormProps) {
     );
   }
 
+  if (!user) {
+    return (
+      <div className="text-center py-8 text-gray-600">
+        Please <a href="/login" className="text-blue-600 underline">sign in</a> to write a review.
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Rating */}
@@ -70,22 +71,6 @@ export default function ReviewForm({ bookId }: ReviewFormProps) {
         {rating === 0 && (
           <p className="text-xs text-gray-500 mt-1">Click on a star to rate this book</p>
         )}
-      </div>
-
-      {/* Name */}
-      <div>
-        <label htmlFor="userName" className="block text-sm font-medium text-gray-700 mb-1">
-          Your Name *
-        </label>
-        <input
-          type="text"
-          id="userName"
-          value={userName}
-          onChange={(e) => setUserName(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="Enter your name"
-          required
-        />
       </div>
 
       {/* Review Content */}
@@ -110,7 +95,7 @@ export default function ReviewForm({ bookId }: ReviewFormProps) {
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={isPending || rating === 0 || !content.trim() || !userName.trim()}
+        disabled={isPending || rating === 0 || !content.trim() || !user}
         className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center"
       >
         {isPending ? (

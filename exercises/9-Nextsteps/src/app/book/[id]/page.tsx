@@ -1,10 +1,14 @@
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getBookById, getBookReviews, getBookAverageRating } from '../../../lib/actions';
+import { getBookById } from '../../../lib/actions';
+import { getReviews } from '../../../actions/reviews';
 import StarRating from '../../../components/StarRating';
 import ReviewForm from '../../../components/ReviewForm';
 import ReviewList from '../../../components/ReviewList';
+import FavoriteButton from '../../../components/FavoriteButton';
+import { cookies } from 'next/headers';
+import { getUserFromToken } from '../../../lib/auth';
 
 interface BookPageProps {
   params: Promise<{
@@ -24,24 +28,31 @@ export default async function BookPage({ params }: BookPageProps) {
     notFound();
   }
 
-  const reviews = await getBookReviews(bookId);
-  const averageRating = await getBookAverageRating(bookId);
+  const reviews = await getReviews(bookId);
+  
+  // Calculate average rating manually
+  const averageRating = reviews.length
+    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+    : 0;
+
+  // Get user from cookie (server-side)
+  const cookieStore = await cookies();
+  const token = cookieStore.get('authToken')?.value;
+  const user = token ? await getUserFromToken(token) : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        {/* Back Navigation */}
+        <div className="mb-6">
           <Link 
             href="/"
-            className="inline-flex items-center text-blue-600 hover:text-blue-800"
+            className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium"
           >
             ← Back to Search
           </Link>
         </div>
-      </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Book Information */}
           <div className="lg:col-span-2">
@@ -82,6 +93,31 @@ export default async function BookPage({ params }: BookPageProps) {
                     <span className="text-sm text-gray-600">
                       ({reviews.length} review{reviews.length !== 1 ? 's' : ''})
                     </span>
+                  </div>
+                  
+                  {/* Favorite Button */}
+                  <div className="mb-6">
+                    {user && user.id && (
+                      <FavoriteButton 
+                        userId={user.id.toString()} 
+                        bookId={bookId} 
+                        bookData={{
+                          title: book.title,
+                          authors: book.authors || [],
+                          imageLinks: {
+                            thumbnail: book.imageLinks?.thumbnail || undefined
+                          }
+                        }} 
+                      />
+                    )}
+                    {!user && (
+                      <Link href="/login" className="inline-flex items-center text-blue-600 hover:underline text-sm">
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                        Login to add to favorites
+                      </Link>
+                    )}
                   </div>
 
                   {/* Book Info */}
@@ -155,7 +191,7 @@ export default async function BookPage({ params }: BookPageProps) {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Write a Review
                 </h3>
-                <ReviewForm bookId={bookId} />
+                <ReviewForm bookId={bookId} user={user} />
               </div>
 
               {/* Reviews List */}

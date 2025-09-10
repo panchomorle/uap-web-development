@@ -35,7 +35,7 @@ describe('Database Functions', () => {
 
       // Verify the date is a valid ISO string
       expect(new Date(review.date)).toBeInstanceOf(Date)
-      expect(review.id).toBeGreaterThan(0)
+      expect(review._id).toBeGreaterThan(0)
     })
 
     it('should handle edge case with minimum rating', () => {
@@ -56,8 +56,8 @@ describe('Database Functions', () => {
     it('should assign incremental IDs to multiple reviews', () => {
       const review1 = addReview('book-1', 4, 'Good', 'User1')
       const review2 = addReview('book-1', 3, 'OK', 'User2')
-      
-      expect(review2.id).toBe(review1.id + 1)
+
+      expect(review2._id).toBe(review1._id + 1)
     })
   })
 
@@ -97,9 +97,9 @@ describe('Database Functions', () => {
     it('should increment upvotes when voting up', () => {
       const bookId = 'test-book-3'
       const review = addReview(bookId, 4, 'Good book', 'User1')
-      
-      const success = voteOnReview(bookId, review.id, 'up')
-      
+
+      const success = voteOnReview(bookId, review._id, 'up')
+
       expect(success).toBe(true)
       const reviews = getReviews(bookId)
       expect(reviews[0].upvotes).toBe(1)
@@ -110,7 +110,7 @@ describe('Database Functions', () => {
       const bookId = 'test-book-4'
       const review = addReview(bookId, 4, 'Good book', 'User1')
       
-      const success = voteOnReview(bookId, review.id, 'down')
+      const success = voteOnReview(bookId, review._id, 'down')
       
       expect(success).toBe(true)
       const reviews = getReviews(bookId)
@@ -119,15 +119,15 @@ describe('Database Functions', () => {
     })
 
     it('should return false for non-existent book', () => {
-      const success = voteOnReview('non-existent-book', 1, 'up')
+      const success = voteOnReview('non-existent-book', "123", 'up')
       expect(success).toBe(false)
     })
 
     it('should return false for non-existent review', () => {
       const bookId = 'test-book-5'
       addReview(bookId, 4, 'Good book', 'User1')
-      
-      const success = voteOnReview(bookId, 999, 'up')
+
+      const success = voteOnReview(bookId, "999", 'up')
       expect(success).toBe(false)
     })
 
@@ -135,10 +135,10 @@ describe('Database Functions', () => {
       const bookId = 'test-book-6'
       const review = addReview(bookId, 4, 'Good book', 'User1')
       
-      voteOnReview(bookId, review.id, 'up')
-      voteOnReview(bookId, review.id, 'up')
-      voteOnReview(bookId, review.id, 'down')
-      
+      voteOnReview(bookId, review._id, 'up')
+      voteOnReview(bookId, review._id, 'up')
+      voteOnReview(bookId, review._id, 'down')
+
       const reviews = getReviews(bookId)
       expect(reviews[0].upvotes).toBe(2)
       expect(reviews[0].downvotes).toBe(1)

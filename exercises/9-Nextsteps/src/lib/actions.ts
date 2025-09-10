@@ -2,7 +2,9 @@
 
 import { revalidatePath } from 'next/cache';
 import { Book, GoogleBooksResponse, Review } from './types';
-import { getReviews, addReview, voteOnReview, getAverageRating } from './database';
+import { getReviews, addReview, upvoteReview, downvoteReview } from '../actions/reviews';
+import { getAverageRating } from './database';
+import { Types } from 'mongoose';
 
 export async function searchBooks(query: string): Promise<Book[]> {
   try {
@@ -54,31 +56,52 @@ export async function getBookById(id: string): Promise<Book | null> {
   }
 }
 
-export async function getBookReviews(bookId: string): Promise<Review[]> {
-  return getReviews(bookId);
+export async function getBookReviews(bookId: string) {
+  // Returns reviews from MongoDB, normalized to flat Review type
+  const rawReviews = await getReviews(bookId);
+  // Normalize reviews to avoid circular references and match expected type
+  return rawReviews.map((r: any) => ({
+    id: r._id?.toString?.() || r.id?.toString?.() || r.id,
+    bookId: r.bookId,
+    rating: r.rating,
+    content: r.content,
+    userId: typeof r.userId === 'object' && r.userId !== null ? (r.userId.username || r.userId._id?.toString?.() || r.userId.toString?.() || '') : (r.userId?.toString?.() || ''),
+    date: r.date ? (typeof r.date === 'string' ? r.date : new Date(r.date).toISOString()) : '',
+    upvotes: r.upvotes ?? 0,
+    downvotes: r.downvotes ?? 0,
+  }));
 }
 
 export async function createReview(
-  bookId: string, 
-  rating: number, 
-  content: string, 
-  userName: string
-): Promise<Review> {
-  const review = addReview(bookId, rating, content, userName);
+  bookId: string,
+  rating: number,
+  content: string,
+  userId: string // Now expects userId from authentication
+): Promise<any> {
+  // Validate input (optional: use reviewUtils)
+  // ...existing code...
+  const review = await addReview({ bookId, rating, content, userId: new Types.ObjectId(userId) });
   revalidatePath(`/book/${bookId}`);
   return review;
 }
 
 export async function voteReview(
-  bookId: string, 
-  reviewId: number, 
-  voteType: 'up' | 'down'
+  bookId: string,
+  reviewId: string,
+  voteType: 'up' | 'down',
+  userId: string
 ): Promise<boolean> {
-  const success = voteOnReview(bookId, reviewId, voteType);
-  if (success) {
-    revalidatePath(`/book/${bookId}`);
+  let result;
+  if (voteType === 'up') {
+    result = await upvoteReview(reviewId, userId);
+  } else {
+    result = await downvoteReview(reviewId, userId);
   }
-  return success;
+  if (result) {
+    revalidatePath(`/book/${bookId}`);
+    return true;
+  }
+  return false;
 }
 
 export async function getBookAverageRating(bookId: string): Promise<number> {

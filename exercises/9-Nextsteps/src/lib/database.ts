@@ -8,13 +8,13 @@ export function getReviews(bookId: string): Review[] {
   return reviews.get(bookId) || [];
 }
 
-export function addReview(bookId: string, rating: number, content: string, userName: string): Review {
+export function addReview(bookId: string, rating: number, content: string, userId: string): Review {
   const review: Review = {
-    id: reviewIdCounter++,
+    _id: (reviewIdCounter++).toString(),
     bookId,
     rating,
     content,
-    userName,
+    userId,
     date: new Date().toISOString(),
     upvotes: 0,
     downvotes: 0
@@ -27,11 +27,11 @@ export function addReview(bookId: string, rating: number, content: string, userN
   return review;
 }
 
-export function voteOnReview(bookId: string, reviewId: number, voteType: 'up' | 'down'): boolean {
+export function voteOnReview(bookId: string, reviewId: string, voteType: 'up' | 'down'): boolean {
   const bookReviews = reviews.get(bookId);
   if (!bookReviews) return false;
 
-  const review = bookReviews.find(r => r.id === reviewId);
+  const review = bookReviews.find(r => r._id === reviewId);
   if (!review) return false;
 
   if (voteType === 'up') {

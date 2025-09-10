@@ -3,22 +3,19 @@ import SearchBooks from '../components/SearchBooks'
 export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+      {/* Main content */}
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
             📚 Descubre y Reseña Libros
           </h1>
-          <p className="text-gray-600">
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Busca libros, lee detalles y comparte tus reseñas con la comunidad
           </p>
         </div>
-      </header>
-
-      {/* Main content */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
+        
         <SearchBooks />
-      </main>
+      </div>
 
       {/* Footer */}
       <footer className="bg-white border-t mt-16">

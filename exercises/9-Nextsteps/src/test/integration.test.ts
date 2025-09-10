@@ -54,18 +54,18 @@ describe('Integration Tests - Complete Review Flow', () => {
       expect(allReviews).toHaveLength(3)
 
       // Step 4: Vote on reviews
-      voteOnReview(bookId, review1.id, 'up')
-      voteOnReview(bookId, review1.id, 'up')
-      voteOnReview(bookId, review1.id, 'up')
-      voteOnReview(bookId, review2.id, 'up')
-      voteOnReview(bookId, review3.id, 'down')
+      voteOnReview(bookId, review1._id, 'up')
+      voteOnReview(bookId, review1._id, 'up')
+      voteOnReview(bookId, review1._id, 'up')
+      voteOnReview(bookId, review2._id, 'up')
+      voteOnReview(bookId, review3._id, 'down')
 
       // Step 5: Check updated reviews and sorting
       const updatedReviews = getReviews(bookId)
       const sortedReviews = sortReviewsByRelevance(updatedReviews)
 
       // Most upvoted review should be first
-      expect(sortedReviews[0].id).toBe(review1.id)
+      expect(sortedReviews[0]._id).toBe(review1._id)
       expect(sortedReviews[0].upvotes).toBe(3)
 
       // Step 6: Calculate average rating
@@ -120,7 +120,7 @@ describe('Integration Tests - Complete Review Flow', () => {
       expect(averageForNonExistent).toBe(0)
 
       // Test voting on non-existent review
-      const voteResult = voteOnReview('any-book', 999, 'up')
+      const voteResult = voteOnReview('any-book', "999", 'up')
       expect(voteResult).toBe(false)
 
       mockFetch.mockRestore()
@@ -139,17 +139,17 @@ describe('Integration Tests - Complete Review Flow', () => {
       expect(getAverageRating(bookId)).toBe(3) // (5 + 1) / 2
 
       // Vote on reviews
-      voteOnReview(bookId, review1.id, 'up')
-      voteOnReview(bookId, review1.id, 'up')
-      voteOnReview(bookId, review2.id, 'down')
+      voteOnReview(bookId, review1._id, 'up')
+      voteOnReview(bookId, review1._id, 'up')
+      voteOnReview(bookId, review2._id, 'down')
 
       // Verify consistency
       reviews = getReviews(bookId)
       expect(reviews).toHaveLength(2) // Same number of reviews
-      
-      const review1Updated = reviews.find(r => r.id === review1.id)
-      const review2Updated = reviews.find(r => r.id === review2.id)
-      
+
+      const review1Updated = reviews.find(r => r._id === review1._id)
+      const review2Updated = reviews.find(r => r._id === review2._id)
+
       expect(review1Updated?.upvotes).toBe(2)
       expect(review1Updated?.downvotes).toBe(0)
       expect(review2Updated?.upvotes).toBe(0)
@@ -178,14 +178,14 @@ describe('Integration Tests - Complete Review Flow', () => {
       expect(allReviews).toHaveLength(5)
 
       // Each review should have unique ID
-      const ids = allReviews.map(r => r.id)
+      const ids = allReviews.map(r => r._id)
       const uniqueIds = new Set(ids)
       expect(uniqueIds.size).toBe(5)
 
       // Simulate concurrent voting
       reviews.forEach(review => {
         for (let i = 0; i < 3; i++) {
-          voteOnReview(bookId, review.id, 'up')
+          voteOnReview(bookId, review._id, 'up')
         }
       })
 

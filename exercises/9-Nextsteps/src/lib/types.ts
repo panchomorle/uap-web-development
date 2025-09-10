@@ -32,11 +32,11 @@ export interface GoogleBooksResponse {
 }
 
 export interface Review {
-  id: number;
+  _id: string; // MongoDB ObjectId as string
   bookId: string;
   rating: number;
   content: string;
-  userName: string;
+  userId: string; // Reference to User
   date: string;
   upvotes: number;
   downvotes: number;
