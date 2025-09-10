@@ -88,13 +88,14 @@ export async function createReview(
 export async function voteReview(
   bookId: string,
   reviewId: string,
-  voteType: 'up' | 'down'
+  voteType: 'up' | 'down',
+  userId: string
 ): Promise<boolean> {
   let result;
   if (voteType === 'up') {
-    result = await upvoteReview(reviewId);
+    result = await upvoteReview(reviewId, userId);
   } else {
-    result = await downvoteReview(reviewId);
+    result = await downvoteReview(reviewId, userId);
   }
   if (result) {
     revalidatePath(`/book/${bookId}`);

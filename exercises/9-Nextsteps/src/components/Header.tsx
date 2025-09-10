@@ -21,10 +21,27 @@ export default function Header({ user }: { user: any }) {
           Home
         </Link>
         
+        {user && (
+          <Link 
+            href="/profile" 
+            className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+          >
+            My Profile
+          </Link>
+        )}
+        
         {user ? (
-          <SessionButton user={user} logout={() => {
-            // TODO: Implement server-side logout (clear cookie, redirect)
-            document.cookie = 'authToken=; Max-Age=0; path=/;';
+          <SessionButton user={user} logout={async () => {
+            // Clear localStorage
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('authUser');
+            
+            // Call API to clear server-side cookie
+            await fetch('/api/auth', {
+              method: 'DELETE',
+            });
+            
+            // Redirect to login page
             window.location.href = '/login';
           }} />
         ) : (

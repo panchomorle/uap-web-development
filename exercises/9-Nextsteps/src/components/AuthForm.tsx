@@ -27,8 +27,15 @@ export default function AuthForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error');
-      // Optionally handle login state here, e.g., redirect or reload
-      window.location.reload(); // Reload to update UI after login/register
+      
+      // Store token and user in localStorage
+      if (data.token && data.user) {
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('authUser', JSON.stringify(data.user));
+      }
+      
+      // Redirect to home page
+      window.location.href = '/';
     } catch (err: any) {
       setError(err.message || 'Error');
     } finally {

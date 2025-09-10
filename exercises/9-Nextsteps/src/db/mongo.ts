@@ -23,6 +23,20 @@ interface IReview extends Document {
   date: Date;
   upvotes: number;
   downvotes: number;
+  voters?: {
+    upvoters: mongoose.Types.ObjectId[];
+    downvoters: mongoose.Types.ObjectId[];
+  };
+}
+
+// Favorite Book Interface
+interface IFavorite extends Document {
+  userId: mongoose.Types.ObjectId;
+  bookId: string;
+  title: string;
+  authors?: string[];
+  thumbnail?: string;
+  addedAt: Date;
 }
 
 // User Schema
@@ -44,9 +58,31 @@ const reviewSchema: Schema = new Schema<IReview>({
   downvotes: { type: Number, default: 0 },
 });
 
+// Review Schema with voter tracking
+reviewSchema.add({
+  voters: {
+    upvoters: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    downvoters: [{ type: Schema.Types.ObjectId, ref: 'User' }]
+  }
+});
+
+// Favorite Schema
+const favoriteSchema: Schema = new Schema<IFavorite>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  bookId: { type: String, required: true },
+  title: { type: String, required: true },
+  authors: [{ type: String }],
+  thumbnail: { type: String },
+  addedAt: { type: Date, default: Date.now }
+});
+
+// Compound index to prevent duplicate favorites
+favoriteSchema.index({ userId: 1, bookId: 1 }, { unique: true });
+
 // Models (prevent overwrite in Next.js hot reload)
 const User = mongoose.models.User || mongoose.model<IUser>('User', userSchema);
 const Review = mongoose.models.Review || mongoose.model<IReview>('Review', reviewSchema);
+const Favorite = mongoose.models.Favorite || mongoose.model<IFavorite>('Favorite', favoriteSchema);
 
 // MongoDB Connection
 const connectDB = async () => {
@@ -63,4 +99,4 @@ const connectDB = async () => {
   }
 };
 
-export { User, Review, connectDB };
+export { User, Review, Favorite, connectDB };

@@ -10,7 +10,7 @@ export function getReviews(bookId: string): Review[] {
 
 export function addReview(bookId: string, rating: number, content: string, userId: string): Review {
   const review: Review = {
-    id: (reviewIdCounter++).toString(),
+    _id: (reviewIdCounter++).toString(),
     bookId,
     rating,
     content,
@@ -31,7 +31,7 @@ export function voteOnReview(bookId: string, reviewId: string, voteType: 'up' | 
   const bookReviews = reviews.get(bookId);
   if (!bookReviews) return false;
 
-  const review = bookReviews.find(r => r.id === reviewId);
+  const review = bookReviews.find(r => r._id === reviewId);
   if (!review) return false;
 
   if (voteType === 'up') {

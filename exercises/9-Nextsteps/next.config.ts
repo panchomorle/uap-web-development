@@ -10,7 +10,19 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
       {
+        protocol: 'http',
+        hostname: 'books.google.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
         protocol: 'https',
+        hostname: 'books.googleusercontent.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'http',
         hostname: 'books.googleusercontent.com',
         port: '',
         pathname: '/**',

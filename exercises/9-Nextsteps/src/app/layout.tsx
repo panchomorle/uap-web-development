@@ -4,6 +4,8 @@ import "./globals.css";
 import Header from "../components/Header";
 import { cookies } from "next/headers";
 import { getUserFromToken } from "../lib/auth";
+import { AuthProvider } from "@/components/AuthMiddleware";
+import { ToastProvider } from "@/components/Toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,7 +41,13 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 min-h-screen`}
       >
         <Header user={user} />
-        <main>{children}</main>
+        <main>
+          <AuthProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </AuthProvider>
+        </main>
       </body>
     </html>
   );

@@ -14,7 +14,11 @@ export async function POST(request: Request) {
       result = await login({ username, password });
     }
     // Set cookie for JWT
-    const response = NextResponse.json({ user: result.user });
+    const response = NextResponse.json({ 
+      user: result.user,
+      token: result.token // Return token to client for localStorage
+    });
+    
     response.cookies.set("authToken", result.token, {
       httpOnly: true,
       sameSite: "lax",
