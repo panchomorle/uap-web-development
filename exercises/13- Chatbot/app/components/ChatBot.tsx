@@ -1,11 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader2, AlertCircle } from 'lucide-react';
-import { SecurityValidator } from '../utils/security';
+import { useRef, useEffect, useState } from 'react';
+import { Send, Bot, User, Loader2, AlertCircle, Book, RefreshCw } from 'lucide-react';
 
 interface Message {
-  id: string;
   role: 'user' | 'assistant';
   content: string;
 }
@@ -13,10 +11,10 @@ interface Message {
 export default function ChatBot() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
-  const [validationError, setValidationError] = useState<string>('');
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [lastUserMessage, setLastUserMessage] = useState<string>('');
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -26,119 +24,80 @@ export default function ChatBot() {
     scrollToBottom();
   }, [messages]);
 
-  // Manejar cambios en el input con validación en tiempo real
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    
-    // Validación básica del lado del cliente
-    if (value.length > 500) {
-      setValidationError('Mensaje demasiado largo (máximo 500 caracteres)');
-      return;
+  const handleRetry = () => {
+    if (lastUserMessage && !isLoading) {
+      setInput(lastUserMessage);
+      setError(null);
     }
-    
-    // Limpiar error de validación si existe
-    if (validationError) {
-      setValidationError('');
-    }
-    
-    setInput(value);
   };
 
-  // Función para hacer streaming del response
-  const streamResponse = async (reader: ReadableStreamDefaultReader<Uint8Array>, userMessage: Message) => {
-    const decoder = new TextDecoder();
-    let assistantMessage: Message = {
-      id: Date.now().toString() + '-assistant',
-      role: 'assistant',
-      content: ''
-    };
-    
-    // Agregar mensaje del asistente vacío
-    setMessages(prev => [...prev, assistantMessage]);
-    
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = { role: 'user', content: input.trim() };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    setLastUserMessage(input.trim());
+    setInput('');
+    setIsLoading(true);
+    setError(null);
+
+    // Timeout de 30 segundos
+    const timeoutId = setTimeout(() => {
+      setError(new Error('La solicitud está tardando mucho. Verifica tu conexión o intenta de nuevo.'));
+      setIsLoading(false);
+    }, 30000);
+
     try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: newMessages }),
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const errorMessage = errorData?.error || `Error del servidor (${response.status})`;
+        throw new Error(errorMessage);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No se pudo establecer la conexión con el servidor');
+
+      const decoder = new TextDecoder();
+      let assistantMessage = '';
+      let hasReceivedData = false;
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
-        const chunk = decoder.decode(value, { stream: true });
-        console.log('Received chunk:', chunk); // Debug log
-        
-        // El AI SDK envía texto plano en chunks, no JSON
-        if (chunk.trim()) {
-          assistantMessage.content += chunk;
-          
-          // Actualizar el mensaje del asistente
-          setMessages(prev => 
-            prev.map(msg => 
-              msg.id === assistantMessage.id 
-                ? { ...msg, content: assistantMessage.content }
-                : msg
-            )
-          );
-        }
-      }
-    } catch (streamError) {
-      console.error('Stream error:', streamError);
-      setError('Error al recibir la respuesta');
-    }
-  };
 
-  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
-    if (isLoading || !input.trim()) return;
-    
-    // Validación del lado del cliente antes de enviar
-    const validation = SecurityValidator.sanitizeInput(input);
-    if (!validation.isValid) {
-      setValidationError(validation.error || 'Input inválido');
-      return;
-    }
-    
-    // Limpiar errores previos
-    setValidationError('');
-    setError('');
-    
-    // Crear mensaje del usuario
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input
-    };
-    
-    // Agregar mensaje del usuario
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
-    setInput('');
-    setIsLoading(true);
-    
-    try {
-      // Hacer request al API
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: newMessages
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        const chunk = decoder.decode(value, { stream: true });
+        assistantMessage += chunk;
+        hasReceivedData = true;
+
+        // Update the last message (assistant's response)
+        setMessages([...newMessages, { role: 'assistant', content: assistantMessage }]);
+      }
+
+      // Check if we received any data
+      if (!hasReceivedData || assistantMessage.trim().length === 0) {
+        throw new Error('No recibí ninguna respuesta del servidor. Puede haber un problema con la API key o el modelo seleccionado.');
       }
       
-      // Verificar si la respuesta es streaming
-      if (response.body) {
-        const reader = response.body.getReader();
-        await streamResponse(reader, userMessage);
-      }
-      
+      clearTimeout(timeoutId);
     } catch (err) {
+      clearTimeout(timeoutId);
       console.error('Chat error:', err);
-      setError(err instanceof Error ? err.message : 'Error al enviar mensaje');
+      
+      const errorObj = err instanceof Error ? err : new Error('Error desconocido al procesar el mensaje');
+      setError(errorObj);
+      
+      // Don't add error to messages, just show error state
+      // This prevents duplicate error display
     } finally {
       setIsLoading(false);
     }
@@ -147,13 +106,13 @@ export default function ChatBot() {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden h-[600px] flex flex-col">
       {/* Header */}
-      <div className="bg-blue-600 dark:bg-blue-700 p-4 text-white">
+      <div className="bg-linear-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700 p-4 text-white">
         <div className="flex items-center gap-3">
-          <Bot className="w-6 h-6" />
+          <Book className="w-6 h-6" />
           <div>
-            <h2 className="font-semibold">AI Assistant</h2>
+            <h2 className="font-semibold">AI Book Advisor</h2>
             <p className="text-xs text-blue-100">
-              {isLoading ? 'Escribiendo...' : 'En línea'}
+              {isLoading ? 'Buscando libros...' : 'Listo para recomendarte libros'}
             </p>
           </div>
         </div>
@@ -163,26 +122,36 @@ export default function ChatBot() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && (
           <div className="text-center text-gray-500 dark:text-gray-400 mt-10">
-            <Bot className="w-12 h-12 mx-auto mb-4 text-blue-500" />
+            <Book className="w-12 h-12 mx-auto mb-4 text-purple-500" />
             <h3 className="text-lg font-medium mb-2">
-              ¡Hola! Soy tu asistente de IA
+              ¡Hola! Soy tu asesor de libros con IA
             </h3>
-            <p className="text-sm">
-              Haceme cualquier pregunta para comenzar la conversación
+            <p className="text-sm mb-4">
+              Puedo ayudarte a descubrir libros, gestionar tu lista de lectura y seguir tus estadísticas
             </p>
+            <div className="text-xs text-left max-w-md mx-auto bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+              <p className="font-semibold mb-2">Prueba preguntando:</p>
+              <ul className="space-y-1 text-gray-600 dark:text-gray-300">
+                <li>• "Recomiéndame libros de ciencia ficción"</li>
+                <li>• "Busca novelas de Gabriel García Márquez"</li>
+                <li>• "Agrega ese libro a mi lista"</li>
+                <li>• "Muéstrame mi lista de lectura"</li>
+                <li>• "Muéstrame mis estadísticas"</li>
+              </ul>
+            </div>
           </div>
         )}
 
-        {messages.map((message: any) => (
+        {messages.map((message, index) => (
           <div
-            key={message.id}
+            key={index}
             className={`flex gap-3 ${
               message.role === 'user' ? 'justify-end' : 'justify-start'
             }`}
           >
             {message.role === 'assistant' && (
               <div className="shrink-0">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-linear-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                   <Bot className="w-4 h-4 text-white" />
                 </div>
               </div>
@@ -191,7 +160,7 @@ export default function ChatBot() {
             <div
               className={`max-w-[80%] rounded-lg px-4 py-2 ${
                 message.role === 'user'
-                  ? 'bg-blue-600 text-white ml-auto'
+                  ? 'bg-linear-to-r from-blue-600 to-purple-600 text-white ml-auto'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
               }`}
             >
@@ -212,13 +181,13 @@ export default function ChatBot() {
         {isLoading && (
           <div className="flex gap-3 justify-start">
             <div className="shrink-0">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-linear-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                 <Bot className="w-4 h-4 text-white" />
               </div>
             </div>
             <div className="max-w-[80%] rounded-lg px-4 py-2 bg-gray-100 dark:bg-gray-700">
               <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
                 <span className="text-sm text-gray-600 dark:text-gray-300">
                   Pensando...
                 </span>
@@ -229,19 +198,31 @@ export default function ChatBot() {
 
         {/* Error messages */}
         {error && (
-          <div className="text-center">
-            <div className="inline-flex items-center gap-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg text-sm">
-              <AlertCircle className="w-4 h-4" />
-              <span><strong>Error:</strong> {error || 'No pude procesar tu mensaje. Intentá de nuevo.'}</span>
+          <div className="flex gap-3 justify-start">
+            <div className="shrink-0">
+              <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-4 h-4 text-white" />
+              </div>
             </div>
-          </div>
-        )}
-        
-        {validationError && (
-          <div className="text-center">
-            <div className="inline-flex items-center gap-2 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 px-4 py-2 rounded-lg text-sm">
-              <AlertCircle className="w-4 h-4" />
-              <span>{validationError}</span>
+            <div className="max-w-[80%] rounded-lg px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+              <div className="flex items-start gap-2 mb-2">
+                <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+                <div className="text-sm">
+                  <p className="font-semibold text-red-700 dark:text-red-300 mb-1">
+                    Error de Conexión
+                  </p>
+                  <p className="text-red-600 dark:text-red-400">
+                    {error.message || 'No pude procesar tu mensaje. Intentá de nuevo.'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleRetry}
+                className="flex items-center gap-2 text-sm text-red-700 dark:text-red-300 hover:text-red-800 dark:hover:text-red-200 font-medium transition-colors"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Reintentar
+              </button>
             </div>
           </div>
         )}
@@ -251,20 +232,20 @@ export default function ChatBot() {
 
       {/* Input Form */}
       <div className="border-t dark:border-gray-700 p-4">
-        <form onSubmit={onSubmit} className="flex gap-2">
+        <form onSubmit={handleSubmit} className="flex gap-2">
           <input
             type="text"
             value={input}
-            onChange={handleInputChange}
-            placeholder="Escribe tu mensaje aquí..."
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Pregunta sobre libros, tu lista de lectura o estadísticas..."
             disabled={isLoading}
-            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white disabled:opacity-50"
+            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white disabled:opacity-50"
             maxLength={500}
           />
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-colors"
+            className="bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-all"
           >
             <Send className="w-5 h-5" />
           </button>

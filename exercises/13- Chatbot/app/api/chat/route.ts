@@ -1,15 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SecurityValidator, SecurityLogger } from '../../utils/security';
-import OpenAI from 'openai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { streamText } from 'ai';
+import { tools } from '@/lib/tools';
 
 // Configuración del runtime para Edge (más rápido para streaming)
 export const runtime = 'edge';
 
+// Maximum duration for serverless function
+export const maxDuration = 30;
+
 // Configurar el cliente OpenAI para usar OpenRouter
-const openai = new OpenAI({
-  baseURL: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
-  apiKey: process.env.OPENROUTER_API_KEY,
-  dangerouslyAllowBrowser: false,
+const openrouter = createOpenAI({
+  name: 'openrouter',
+  baseURL: 'https://openrouter.ai/api/v1',
+  apiKey: process.env.OPENROUTER_API_KEY || '',
+  headers: {
+    'HTTP-Referer': 'http://localhost:3000',
+    'X-Title': 'AI Book Advisor',
+  },
 });
 
 export async function POST(req: NextRequest) {
@@ -69,14 +78,32 @@ export async function POST(req: NextRequest) {
     });
 
     // Obtener el modelo de las variables de entorno o usar uno por defecto
-    const model = process.env.OPENROUTER_MODEL || 'anthropic/claude-3-haiku';
+    const model = process.env.OPENROUTER_MODEL || 'google/gemini-flash-1.5';
 
-    // Realizar la request de streaming al LLM usando OpenAI client directamente
-    const stream = await openai.chat.completions.create({
-      model: model,
-      messages: sanitizedMessages as any,
-      temperature: 0.7,
-      stream: true,
+    // Realizar la request con tool calling usando Vercel AI SDK
+    const result = streamText({
+      model: openrouter(model),
+      messages: sanitizedMessages,
+      tools,
+      system: `You are an AI Book Advisor assistant. You help users discover books, manage their reading lists, and track their reading habits.
+
+You have access to the following tools:
+1. searchBooks - Search for books by title, author, subject, or keywords
+2. getBookDetails - Get detailed information about a specific book
+3. addToReadingList - Add a book to the user's reading list
+4. getReadingList - View the user's reading list
+5. markAsRead - Mark a book as read with optional rating and review
+6. getReadingStats - View reading statistics and analytics
+
+When users ask about books:
+- Use searchBooks to find books based on their interests
+- Use getBookDetails to provide more information about specific books
+- Proactively suggest adding books to their reading list
+- Help them track their reading progress
+
+Be conversational, friendly, and helpful. When presenting book information, highlight interesting details like ratings, page count, and descriptions. Always confirm actions like adding books to lists or marking them as read.
+
+Respond in Spanish when the user writes in Spanish, and in English when they write in English.`,
     });
 
     // Log de request exitosa
@@ -87,33 +114,8 @@ export async function POST(req: NextRequest) {
       duration: Date.now() - startTime
     });
 
-    // Crear un ReadableStream para el streaming
-    const encoder = new TextEncoder();
-    const readableStream = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of stream) {
-            const content = chunk.choices[0]?.delta?.content || '';
-            if (content) {
-              controller.enqueue(encoder.encode(content));
-            }
-          }
-          controller.close();
-        } catch (error) {
-          console.error('Streaming error:', error);
-          controller.error(error);
-        }
-      },
-    });
-
     // Retornar la respuesta de streaming
-    return new Response(readableStream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
-    });
+    return result.toTextStreamResponse();
     
   } catch (error) {
     const duration = Date.now() - startTime;
@@ -128,6 +130,7 @@ export async function POST(req: NextRequest) {
     
     // Manejar diferentes tipos de errores
     if (error instanceof Error) {
+      // Errores de validación
       if (error.message.includes('Invalid') || 
           error.message.includes('Empty') || 
           error.message.includes('no permitido') ||
@@ -138,11 +141,37 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
+      
+      // Errores de API de OpenRouter
+      if (error.message.includes('API') || 
+          error.message.includes('endpoints') ||
+          error.message.includes('No endpoints found')) {
+        return NextResponse.json(
+          { 
+            error: 'Error de configuración del modelo de IA. Verifica que el modelo esté disponible en OpenRouter.',
+            details: error.message
+          },
+          { status: 503 }
+        );
+      }
+      
+      // Errores de autenticación
+      if (error.message.includes('auth') || 
+          error.message.includes('API key') ||
+          error.message.includes('unauthorized')) {
+        return NextResponse.json(
+          { error: 'Error de autenticación. Verifica que la API key sea válida.' },
+          { status: 401 }
+        );
+      }
     }
     
     // Error genérico para no exponer detalles internos
     return NextResponse.json(
-      { error: 'Error interno del servidor. Intentá de nuevo.' },
+      { 
+        error: 'Error interno del servidor. Intentá de nuevo más tarde.',
+        type: error instanceof Error ? error.constructor.name : 'UnknownError'
+      },
       { status: 500 }
     );
   }
